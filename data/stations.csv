@@ -1,0 +1,25 @@
+station,name,address,type,lat,lon,altitude
+4,Plaza de España,Plaza de España,Urban traffic,40.42388,-3.71226,637
+8,Escuelas Aguirre,Entre C/ Alcalá y C/ O’ Donell,Urban traffic,40.42155,-3.68232,672
+11,Ramón y Cajal,Avda. Ramón y Cajal  esq. C/ Príncipe de Vergara,Urban traffic,40.45147,-3.67735,709
+16,Arturo Soria,C/ Arturo Soria  esq. C/  Vizconde de los Asilos,Urban background,40.44005,-3.63924,695
+17,Villaverde,C/ Juan Peñalver,Urban background,40.34715,-3.71332,601
+18,Farolillo,C/ Farolillo - C/ Ervigio,Urban background,40.39478,-3.73184,625
+24,Casa de Campo,Casa de Campo  (Terminal del Teleférico),Suburban,40.41936,-3.74734,645
+27,Barajas Pueblo,"C/ Júpiter, 21",Urban background,40.47692,-3.58003,619
+35,Plaza del Carmen,Plaza del Carmen esq. Tres Cruces,Urban background,40.41921,-3.70317,660
+36,Moratalaz,Avda. Moratalaz  esq. Camino de los Vinateros,Urban traffic,40.40795,-3.64531,671
+38,Cuatro Caminos,Avda. Pablo Iglesias esq. C/ Marqués de Lema,Urban traffic,40.44554,-3.70713,699
+39,Barrio del Pilar,Avda. Betanzos esq. C/  Monforte de Lemos,Urban traffic,40.47823,-3.71154,675
+40,Vallecas,C/ Arroyo del Olivar  esq. C/  Río Grande.,Urban background,40.38815,-3.65153,678
+47,Méndez Álvaro,C/ Juan de Mariana / Plaza Amanecer Méndez Álvaro,Urban background,40.3981,-3.68681,600
+48,Castellana,C/ José Gutiérrez Abascal,Urban traffic,40.43989,-3.69037,678
+49,Parque del Retiro,Paseo Venezuela- Palacio de Velázquez,Urban background,40.41444,-3.6825,658
+50,Plaza Castilla,Plaza Castilla (Canal),Urban traffic,40.46558,-3.68874,730
+54,Ensanche de Vallecas,Avda. La Gavia / Avda. Las Suertes,Urban background,40.37301,-3.61214,628
+55,Urb. Embajada,C/ Riaño (Barajas),Urban background,40.46236,-3.58056,614
+56,Plaza Elíptica,Plaza Elíptica - Avda. Oporto,Urban traffic,40.38503,-3.71877,605
+57,Sanchinarro,C/ Princesa de Éboli esq. C/ María Tudor,Urban background,40.4942,-3.66052,700
+58,El Pardo,Avda. La Guardia,Suburban,40.51807,-3.77461,611
+59,Juan Carlos I,Parque Juan Carlos I (frente oficinas mantenimiento),Suburban,40.46514,-3.60903,660
+60,Tres Olivos,Plaza Tres Olivos,Urban background,40.50055,-3.68973,709

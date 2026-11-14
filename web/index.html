@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AireMañana — tomorrow's air in Madrid</title>
+<meta name="description" content="Next-day NO₂ forecast and school alert for Madrid's 24 official air-quality stations, issued every evening at 18:30.">
+<meta name="theme-color" content="#F5F4EF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0C0E11" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="#forecast" aria-label="AireMañana">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <circle cx="16" cy="16" r="15" fill="var(--ink)"/>
+        <path d="M6 19.5c3.2-3.6 6.6-3.6 10 0s6.8 3.6 10 0" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M8.5 13.5c2.5-2.6 5-2.6 7.5 0s5 2.6 7.5 0" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" opacity=".55"/>
+      </svg>
+      <span>Aire<em>Mañana</em></span>
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#forecast" data-i18n="nav.forecast"></a>
+      <a href="#map" data-i18n="nav.map"></a>
+      <a href="#story" data-i18n="nav.story"></a>
+      <a href="#evidence" data-i18n="nav.evidence"></a>
+      <a href="#how" data-i18n="nav.how"></a>
+    </nav>
+    <div class="topbar-actions">
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="en">EN</button>
+        <button type="button" data-lang="es">ES</button>
+      </div>
+      <a class="btn btn-ghost" id="notebookLink" target="_blank" rel="noopener" data-i18n="cta.notebook"></a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- 1 · Forecast -->
+  <section id="forecast" class="hero">
+    <div class="wrap">
+      <div class="status" id="status" data-i18n="loading"></div>
+      <div class="hero-grid" id="hero" hidden>
+        <div class="hero-main">
+          <div class="eyebrow" id="heroDay"></div>
+          <label class="station-pick">
+            <span class="sr" data-i18n="hero.station"></span>
+            <select id="stationSelect"></select>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </label>
+          <div class="station-meta" id="stationMeta"></div>
+
+          <div class="bignum-row">
+            <div class="bignum" id="bigNum">–</div>
+            <div class="bignum-unit" data-i18n="hero.unit"></div>
+          </div>
+
+          <div class="verdict" id="verdict">
+            <span class="verdict-dot"></span>
+            <div>
+              <div class="verdict-title" id="verdictTitle"></div>
+              <div class="verdict-sub" id="verdictSub"></div>
+            </div>
+          </div>
+
+          <div class="scale" id="scale" aria-hidden="true"></div>
+
+          <div class="stats">
+            <div class="stat"><div class="stat-label" data-i18n="stat.chance"></div><div class="stat-value" id="statChance"></div></div>
+            <div class="stat"><div class="stat-label" data-i18n="stat.range"></div><div class="stat-value" id="statRange"></div><div class="stat-note" data-i18n="stat.range.note"></div></div>
+            <div class="stat"><div class="stat-label" data-i18n="stat.today"></div><div class="stat-value" id="statToday"></div><div class="stat-note" id="statTodayNote"></div></div>
+          </div>
+
+          <div class="wx-block">
+            <div class="wx-title" data-i18n="wx.title"></div>
+            <div class="wx" id="wx"></div>
+          </div>
+        </div>
+
+        <div class="hero-side">
+          <div class="card">
+            <div class="card-head">
+              <h3 data-i18n="hist.title"></h3>
+              <div class="legend" id="histLegend"></div>
+            </div>
+            <div class="chart" id="histChart"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3 data-i18n="why.title"></h3></div>
+            <ul class="why" id="why"></ul>
+            <p class="fine" data-i18n="why.note"></p>
+          </div>
+        </div>
+      </div>
+      <p class="issued" id="issued"></p>
+    </div>
+  </section>
+
+  <!-- 2 · Map -->
+  <section id="map" class="section">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <div class="kicker" data-i18n="map.kicker"></div>
+        <h2 data-i18n="map.title"></h2>
+        <p class="lead" data-i18n="map.sub"></p>
+      </div>
+      <div class="map-grid reveal">
+        <div class="map-box">
+          <div id="mapgl"></div>
+          <div class="map-legend" id="mapLegend"></div>
+        </div>
+        <div class="card map-list">
+          <h3 data-i18n="map.list"></h3>
+          <ol id="rank"></ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · Why it matters + our question -->
+  <section id="story" class="section section-tint">
+    <div class="wrap">
+      <div class="story-grid">
+        <div class="reveal">
+          <div class="kicker" data-i18n="story.kicker"></div>
+          <h2 data-i18n="story.title"></h2>
+          <p class="lead" data-i18n="story.p1"></p>
+          <p class="lead" data-i18n="story.p2"></p>
+          <div class="who">
+            <div class="who-title" data-i18n="story.who"></div>
+            <ul>
+              <li><span class="who-ico">◐</span><span data-i18n="story.who1"></span></li>
+              <li><span class="who-ico">◑</span><span data-i18n="story.who2"></span></li>
+              <li><span class="who-ico">◒</span><span data-i18n="story.who3"></span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="card reveal">
+          <div class="kicker" data-i18n="q.kicker"></div>
+          <h3 class="h3-serif" data-i18n="q.title"></h3>
+          <p id="qBody"></p>
+          <div class="duo">
+            <div><div class="mini-title" data-i18n="decline.mean"></div><div class="chart" id="declineMean"></div></div>
+            <div><div class="mini-title"><span data-i18n="decline.days"></span> · <span class="cap-key"></span> <span data-i18n="decline.cap"></span></div><div class="chart" id="declineDays"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · Evidence -->
+  <section id="evidence" class="section">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <div class="kicker" data-i18n="ev.kicker"></div>
+        <h2 id="evTitle"></h2>
+        <p class="lead" id="evSub"></p>
+      </div>
+      <div class="kpis reveal" id="kpis"></div>
+
+      <div class="card big-card reveal">
+        <div class="card-head">
+          <div><h3 data-i18n="ts.title"></h3><p class="card-sub" data-i18n="ts.sub"></p></div>
+          <div class="legend" id="tsLegend"></div>
+        </div>
+        <div class="chart" id="tsChart"></div>
+        <div class="chart chart-context" id="tsContext"></div>
+      </div>
+
+      <div class="two reveal">
+        <div class="card">
+          <h3 data-i18n="to.title"></h3>
+          <p class="card-sub" data-i18n="to.sub"></p>
+          <div class="chart" id="tradeoff"></div>
+        </div>
+        <div class="card">
+          <h3 data-i18n="dr.title"></h3>
+          <p class="card-sub" id="driftBody"></p>
+          <div class="chart" id="drift"></div>
+        </div>
+      </div>
+
+      <div class="card big-card reveal">
+        <div class="two-head">
+          <div>
+            <h3 data-i18n="st.title"></h3>
+            <p class="card-sub" data-i18n="st.sub"></p>
+            <div class="legend" id="stLegend"></div>
+          </div>
+        </div>
+        <div class="chart" id="stations"></div>
+      </div>
+
+      <div class="two reveal">
+        <div class="card">
+          <h3 data-i18n="fa.title"></h3>
+          <p class="card-sub" id="failSub"></p>
+          <div class="fails" id="fails"></div>
+          <div class="mini-title" data-i18n="fa.month"></div>
+          <div class="legend" id="monthLegend"></div>
+          <div class="chart" id="months"></div>
+        </div>
+        <div class="stack">
+          <div class="card">
+            <h3 data-i18n="un.title"></h3>
+            <p class="card-sub" id="uncSub"></p>
+            <div class="chart" id="calib"></div>
+          </div>
+          <div class="card card-live">
+            <div class="live-dot"></div>
+            <h3 data-i18n="live.title"></h3>
+            <p class="card-sub" id="liveBody"></p>
+            <div class="live-stats" id="liveStats"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · How it works -->
+  <section id="how" class="section section-tint">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <div class="kicker" data-i18n="how.kicker"></div>
+        <h2 data-i18n="how.title"></h2>
+      </div>
+      <ol class="steps reveal" id="steps"></ol>
+      <div class="timeline reveal" id="timeline"></div>
+      <div class="two limits reveal">
+        <div>
+          <h3 data-i18n="lim.title"></h3>
+          <ul class="ticks"><li data-i18n="lim.1"></li><li data-i18n="lim.2"></li><li data-i18n="lim.3"></li><li data-i18n="lim.4"></li></ul>
+        </div>
+        <div>
+          <h3 data-i18n="next.title"></h3>
+          <ul class="ticks arrows"><li data-i18n="next.1"></li><li data-i18n="next.2"></li><li data-i18n="next.3"></li></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <p class="disclaimer" data-i18n="foot.disclaimer"></p>
+    <div class="foot-grid">
+      <div>
+        <div class="foot-title" data-i18n="foot.data"></div>
+        <ul>
+          <li><a href="https://datos.madrid.es/portal/site/egob" target="_blank" rel="noopener">Ayuntamiento de Madrid — open data: hourly air quality, real-time data, station list</a></li>
+          <li><a href="https://eeadmz1-downloads-webapp.azurewebsites.net/" target="_blank" rel="noopener">European Environment Agency — up-to-date air quality (E2a)</a></li>
+          <li><a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo — ERA5 history, archived ECMWF IFS forecasts, live forecast</a></li>
+          <li><a href="https://www.eea.europa.eu/en/analysis/publications/air-quality-status-report-2025/benchmark-analysis-against-the-standards-in-the-revised-directive-eu-2024-2881" target="_blank" rel="noopener">EU Directive 2024/2881 — NO₂ daily limit (EEA summary)</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="foot-title" data-i18n="foot.built"></div>
+        <p>Python · pandas · scikit-learn · D3 · MapLibre · map © OpenFreeMap, © OpenMapTiles, © OpenStreetMap contributors</p>
+        <div class="foot-title" data-i18n="foot.ai"></div>
+        <p data-i18n="foot.ai.text"></p>
+      </div>
+      <div>
+        <div class="foot-title" data-i18n="foot.code"></div>
+        <p><a id="repoLink" target="_blank" rel="noopener">GitHub</a> · <a id="colabLink" target="_blank" rel="noopener">Google Colab</a></p>
+        <p class="fine">AireMañana · Veritas AI Hackathon 2026 · AI + Climate</p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="i18n.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
