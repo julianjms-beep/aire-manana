@@ -14,8 +14,11 @@ For each station it gives:
 - tomorrow's daily mean, a likely range and the chance of exceeding 50 µg/m³
 - a decision a teacher can act on ("Outdoor PE and recess are fine" / "Keep an eye on it" / "Move PE indoors")
 - the reasons behind the forecast (recent levels, weekday or holiday, season, rain, wind, temperature, self-correction)
+- the cleanest two hours for PE tomorrow, from the station's typical day
 
-Every forecast is saved before the day happens and checked later, so the test keeps growing.
+A teacher can search any of Madrid's 1,253 schools (it gets its nearest station), subscribe to a calendar that shows
+tomorrow's decision every evening, share a ready-made image on WhatsApp, print a poster with a QR code, or install the
+site as a phone app. Every forecast is saved before the day happens and checked later, so the test keeps growing.
 
 **How it works.**
 - **Data:** 2.4 million official hourly NO₂ values (Ayuntamiento de Madrid, EEA), ERA5 weather, and archived ECMWF
@@ -41,6 +44,8 @@ Every forecast is saved before the day happens and checked later, so the test ke
 - Trained on one station, it beats the baseline at **all 24 stations** (17–44 % lower error); v1 was worse at 14 of
   them.
 - When it said a 40–60 % chance of a bad day, one happened 44 % of the time.
+- On the test school days, the suggested PE window had 30 % less NO₂ than the school-day average (14.8 vs 21.1 µg/m³)
+  and 51 % less than 9:00–11:00.
 
 **Where it fails.**
 - At the alert threshold chosen in validation (45 µg/m³) it caught 30 of 45 bad days (67 %), below the 85 % reached in
@@ -49,13 +54,15 @@ Every forecast is saved before the day happens and checked later, so the test ke
 - Perfect weather would only cut the error from 4.4 to 4.2, so the weather forecast is not the main limit.
 - Its 80 % range covered 75 % of days, so it is slightly too narrow.
 - It covers NO₂ only, and uses central-Madrid weather for every station.
+- A school gets its nearest station's forecast (median 1.3 km away); the cleanest hours come from a typical day, not
+  an hourly forecast.
 - The test was scored twice (v1, then v2). The fix was designed on validation data only.
 
-**What we'd do next.** An automatic 6 pm e-mail or Telegram alert for a real school; ozone in summer; local weather
-per station; training on all 24 stations at once.
+**What we'd do next.** A pilot with a real school, with push alerts on top of the calendar; ozone in summer; local
+weather per station; training on all 24 stations at once.
 
 **Sources.**
-- Ayuntamiento de Madrid open data: hourly and real-time air quality, station list.
+- Ayuntamiento de Madrid open data: hourly and real-time air quality, station list, education centres.
 - European Environment Agency: E2a up-to-date air quality.
 - Open-Meteo: ERA5, archived ECMWF IFS forecasts, live forecast.
 - EU Directive 2024/2881.
