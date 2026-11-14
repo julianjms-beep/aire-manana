@@ -4,6 +4,7 @@
 
 **Live website:** https://julianjms-beep.github.io/aire-manana/ (English / Español, updated every evening)
 **Notebook (runs end to end in Colab):** [AireManana.ipynb](https://colab.research.google.com/github/julianjms-beep/aire-manana/blob/main/AireManana.ipynb)
+**One-page write-up:** [WRITEUP.md](WRITEUP.md)
 
 > This project is a prototype and is not medical advice.
 
