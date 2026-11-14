@@ -45,7 +45,7 @@ window.I18N = {
     "wx.title": "Tomorrow's weather · ECMWF",
     "wx.rain": "Rain", "wx.wind": "Wind", "wx.temp": "Temperature", "wx.calm": "Calm hours",
     "issued": "Issued {date}, {time} Madrid time · new forecast every day at 18:30",
-    "issued.early": "Made at {time} with {h} of today's 18 hours measured · the evening forecast comes at 18:30",
+    "issued.early": "Made at {time} with {h} of today's 18 hours measured · the evening forecast comes after 18:30",
     "nodata": "This station sent no data today, so there is no forecast for it.",
 
     "map.kicker": "The whole city",
@@ -188,7 +188,7 @@ window.I18N = {
     "wx.title": "El tiempo de mañana · ECMWF",
     "wx.rain": "Lluvia", "wx.wind": "Viento", "wx.temp": "Temperatura", "wx.calm": "Horas de calma",
     "issued": "Emitida el {date}, {time} hora de Madrid · nueva previsión cada día a las 18:30",
-    "issued.early": "Hecha a las {time} con {h} de las 18 horas de hoy medidas · la previsión de la tarde llega a las 18:30",
+    "issued.early": "Hecha a las {time} con {h} de las 18 horas de hoy medidas · la previsión de la tarde llega después de las 18:30",
     "nodata": "Esta estación no ha enviado datos hoy, así que no hay previsión para ella.",
 
     "map.kicker": "Toda la ciudad",
