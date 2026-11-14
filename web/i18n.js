@@ -6,6 +6,7 @@ window.I18N = {
 
     "hero.for": "Forecast for {day}",
     "hero.station": "Station",
+    "pick.tomorrow": "Tomorrow",
     "hero.unit": "µg/m³ of NO₂, daily mean",
     "verdict.ok": "Outdoor PE and recess are fine",
     "verdict.watch": "Outdoor activity is fine — keep an eye on it",
@@ -87,7 +88,7 @@ window.I18N = {
     "ts.measured": "Measured", "ts.model": "AireMañana", "ts.persistence": "“Tomorrow = today”",
     "to.title": "Fewer false alarms for the same protection",
     "to.sub": "Bad days caught against false alarms, for every possible alert threshold. Dots mark the threshold each method chose on validation data, before the test.",
-    "to.x": "False alarms in the test period", "to.y": "Bad days caught (of {n})",
+    "to.x": "False alarms in the test period", "to.x.short": "False alarms", "to.y": "Bad days caught (of {n})",
     "m.persistence": "“Tomorrow = today”", "m.weekday": "Weekday rule", "m.v1": "AireMañana v1", "m.v2": "AireMañana v2",
     "m.absolute_2015": "Absolute level, 2015–24", "m.relative_2015": "Relative change, 2015–24",
     "dr.title": "The drift we found — and the fix",
@@ -149,6 +150,7 @@ window.I18N = {
 
     "hero.for": "Previsión para el {day}",
     "hero.station": "Estación",
+    "pick.tomorrow": "Mañana",
     "hero.unit": "µg/m³ de NO₂, media del día",
     "verdict.ok": "Educación Física y recreo, al aire libre",
     "verdict.watch": "Se puede salir — pero conviene vigilarlo",
@@ -230,7 +232,7 @@ window.I18N = {
     "ts.measured": "Medido", "ts.model": "AireMañana", "ts.persistence": "«Mañana = hoy»",
     "to.title": "Menos falsas alarmas con la misma protección",
     "to.sub": "Días malos detectados frente a falsas alarmas, para cada umbral posible. Los puntos marcan el umbral que cada método eligió con los datos de validación, antes de la prueba.",
-    "to.x": "Falsas alarmas en el periodo de prueba", "to.y": "Días malos detectados (de {n})",
+    "to.x": "Falsas alarmas en el periodo de prueba", "to.x.short": "Falsas alarmas", "to.y": "Días malos detectados (de {n})",
     "m.persistence": "«Mañana = hoy»", "m.weekday": "Regla del día de la semana", "m.v1": "AireMañana v1", "m.v2": "AireMañana v2",
     "m.absolute_2015": "Nivel absoluto, 2015–24", "m.relative_2015": "Cambio relativo, 2015–24",
     "dr.title": "La deriva que encontramos — y cómo la arreglamos",

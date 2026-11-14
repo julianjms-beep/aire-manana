@@ -50,11 +50,17 @@
       <div class="hero-grid" id="hero" hidden>
         <div class="hero-main">
           <div class="eyebrow" id="heroDay"></div>
-          <label class="station-pick">
-            <span class="sr" data-i18n="hero.station"></span>
-            <select id="stationSelect"></select>
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </label>
+          <div class="station-pick" id="stationPick">
+            <span class="sr" id="pickLabel" data-i18n="hero.station"></span>
+            <button type="button" class="pick-btn" id="pickBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="pickList" aria-labelledby="pickLabel pickName">
+              <span class="pick-name" id="pickName"></span>
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="pick-pop" id="pickPop" hidden>
+              <div class="pick-head"><span data-i18n="hero.station"></span><span><span data-i18n="pick.tomorrow"></span> · <span class="unit">µg/m³</span></span></div>
+              <ul class="pick-list" id="pickList" role="listbox" tabindex="-1" aria-labelledby="pickLabel"></ul>
+            </div>
+          </div>
           <div class="station-meta" id="stationMeta"></div>
 
           <div class="bignum-row">

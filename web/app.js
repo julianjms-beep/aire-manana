@@ -80,11 +80,8 @@
     const lv = ok ? level(s) : "ok";
     $("#forecast").style.setProperty("--tint", ok ? `var(--${lv === "alert" ? "bad" : lv === "watch" ? "mod" : "good"})` : "var(--faint)");
     $("#heroDay").textContent = t("hero.for", { day: dname(F.tomorrow, { weekday: "long", day: "numeric", month: "long" }) });
-    const select = $("#stationSelect");
-    select.innerHTML = [...F.stations].sort((a, b) => a.name.localeCompare(b.name, "es"))
-      .map(x => `<option value="${x.id}"${x.id === sel ? " selected" : ""}>${esc(x.name)}</option>`).join("");
+    renderPicker(s);
     $("#stationMeta").textContent = [typeName(s.type), s.address].filter(Boolean).join(" · ");
-    fitSelect(select);
 
     const v = $("#verdict");
     v.className = `verdict ${ok ? lv : ""}`;
@@ -108,14 +105,91 @@
     renderWhy(s);
   }
 
-  function fitSelect(select) {
-    const probe = document.createElement("span"), cs = getComputedStyle(select);
-    probe.style.cssText = `position:absolute;visibility:hidden;white-space:nowrap;font:${cs.font};letter-spacing:${cs.letterSpacing}`;
-    probe.textContent = select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : "";
-    document.body.appendChild(probe);
-    select.style.width = `${probe.offsetWidth + 49}px`;
-    probe.remove();
+  // Station picker: a styled listbox (a native <select> would open its menu at the 52 px heading size).
+  const pick = { btn: $("#pickBtn"), pop: $("#pickPop"), list: $("#pickList"), ids: [], active: -1, typed: "", typedAt: 0 };
+  const fold = x => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+  function renderPicker(s) {
+    $("#pickName").textContent = s.name;
+    const rows = [...F.stations].sort((a, b) => a.name.localeCompare(b.name, "es"));
+    pick.ids = rows.map(x => x.id);
+    pick.list.innerHTML = rows.map(x => {
+      const ok = x.status === "ok";
+      return `<li role="option" id="pick-${x.id}" data-id="${x.id}" aria-selected="${x.id === sel}" class="${ok ? "" : "off"}">
+        <i style="background:${ok ? no2Color(x.forecast) : "var(--line-2)"}"></i>
+        <span>${esc(x.name)}<small>${esc(typeName(x.type))}</small></span><b>${ok ? fmt(x.forecast) : "–"}</b></li>`;
+    }).join("");
+    if (!pick.pop.hidden) setActive(pick.ids.indexOf(sel));
   }
+  function setActive(i, scroll = true) {
+    const items = pick.list.children;
+    if (!items.length) return;
+    i = Math.max(0, Math.min(items.length - 1, i));
+    if (items[pick.active]) items[pick.active].classList.remove("active");
+    pick.active = i;
+    items[i].classList.add("active");
+    pick.list.setAttribute("aria-activedescendant", items[i].id);
+    const li = items[i], l = pick.list;
+    if (!scroll) return;
+    if (li.offsetTop < l.scrollTop) l.scrollTop = li.offsetTop - 6;
+    else if (li.offsetTop + li.offsetHeight > l.scrollTop + l.clientHeight) l.scrollTop = li.offsetTop + li.offsetHeight - l.clientHeight + 6;
+  }
+  function openPicker() {
+    if (!F || !pick.pop.hidden) return;
+    pick.pop.hidden = false; pick.btn.setAttribute("aria-expanded", "true");
+    const i = pick.ids.indexOf(sel);
+    pick.list.scrollTop = 0; setActive(i);
+    const li = pick.list.children[i];
+    if (li) pick.list.scrollTop = Math.max(0, li.offsetTop - pick.list.clientHeight / 2 + li.offsetHeight / 2);
+    pick.list.focus({ preventScroll: true });
+  }
+  function closePicker(refocus) {
+    if (pick.pop.hidden) return;
+    pick.pop.hidden = true; pick.btn.setAttribute("aria-expanded", "false");
+    if (refocus) pick.btn.focus({ preventScroll: true });
+  }
+  function choose(i) {
+    const id = pick.ids[i];
+    closePicker(true);
+    if (id != null && id !== sel) select(id);
+  }
+  pick.btn.addEventListener("click", () => (pick.pop.hidden ? openPicker() : closePicker(false)));
+  pick.btn.addEventListener("keydown", ev => {
+    if (["ArrowDown", "ArrowUp"].includes(ev.key)) { ev.preventDefault(); openPicker(); }
+  });
+  pick.list.addEventListener("keydown", ev => {
+    const n = pick.ids.length, k = ev.key;
+    if (k === "ArrowDown") setActive(pick.active + 1);
+    else if (k === "ArrowUp") setActive(pick.active - 1);
+    else if (k === "Home") setActive(0);
+    else if (k === "End") setActive(n - 1);
+    else if (k === "PageDown") setActive(pick.active + 8);
+    else if (k === "PageUp") setActive(pick.active - 8);
+    else if (k === "Enter" || k === " ") choose(pick.active);
+    else if (k === "Escape") closePicker(true);
+    else if (k === "Tab") { closePicker(false); return; }
+    else if (k.length === 1 && /\S/.test(k)) {
+      const now = Date.now();
+      pick.typed = (now - pick.typedAt > 700 ? "" : pick.typed) + fold(k); pick.typedAt = now;
+      const names = pick.ids.map(id => fold(station(id).name));
+      const from = pick.typed.length === 1 ? pick.active + 1 : pick.active;
+      for (let j = 0; j < n; j++) { const q = (from + j) % n; if (names[q].startsWith(pick.typed)) { setActive(q); break; } }
+    } else return;
+    ev.preventDefault();
+  });
+  let lastPt = "";
+  pick.list.addEventListener("pointermove", ev => {
+    const pt = `${ev.clientX},${ev.clientY}`;                       // Safari also fires this when the list scrolls under a still mouse
+    if (pt === lastPt) return;
+    lastPt = pt;
+    const li = ev.target.closest("li");
+    if (li) setActive([...pick.list.children].indexOf(li), false);
+  });
+  pick.list.addEventListener("click", ev => {
+    const li = ev.target.closest("li");
+    if (li) choose([...pick.list.children].indexOf(li));
+  });
+  document.addEventListener("pointerdown", ev => { if (!$("#stationPick").contains(ev.target)) closePicker(false); });
 
   function renderScale(s) {
     const max = Math.max(80, Math.ceil((s.high * 1.1) / 10) * 10);
@@ -150,7 +224,7 @@
     const lastIdx = rows.length - 1;
     svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - m.b})`)
       .call(d3.axisBottom(x).tickSize(0).tickPadding(8)
-        .tickValues(rows.filter((r, i) => i === lastIdx || (lastIdx - i) % 7 === 0 && i < lastIdx - 2).map(r => r.d))
+        .tickValues(rows.filter((r, i) => i === lastIdx || (lastIdx - i) % 7 === 0 && i < lastIdx - 2 && x(r.d) - m.l > 18).map(r => r.d))
         .tickFormat(d => (d === F.tomorrow ? dname(d, { weekday: "short" }) : dname(d, { day: "numeric", month: "short" }))));
     svg.append("line").attr("class", "limit-line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", y(F.limit)).attr("y2", y(F.limit));
     svg.append("text").attr("class", "lbl-m").attr("x", m.l + 4).attr("y", y(F.limit) - 5).text(`${t("scale.limit")} ${F.limit}`);
@@ -326,10 +400,11 @@
       .on("pointermove", (ev, r) => showTip(`<b>${r.k}${r.partial ? " (Jan–Oct)" : ""}</b><br>${fmt(r.v)}`, ev)).on("pointerleave", hideTip);
     const peak = rows.reduce((a, b) => (b.v > a.v ? b : a)), ends = [peak, rows[rows.length - 1]];
     const top = r => Math.min(y(r.v), capLine != null ? y(capLine) - 2 : Infinity) - 5;
+    const every = x.step() >= 30 ? 1 : x.step() >= 15 ? 2 : 3;          // year labels never touch, the latest is always shown
     svg.append("g").selectAll("text").data(ends).join("text").attr("class", "lbl").attr("text-anchor", "middle")
       .attr("x", r => x(r.k) + x.bandwidth() / 2).attr("y", top).text(r => fmt(r.v));
     svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - m.b})`)
-      .call(d3.axisBottom(x).tickSize(0).tickPadding(6).tickValues(rows.filter((r, i) => i % 2 === 0 || i === rows.length - 1).map(r => r.k)).tickFormat(k => `’${String(k).slice(2)}`));
+      .call(d3.axisBottom(x).tickSize(0).tickPadding(6).tickValues(rows.filter((r, i) => (rows.length - 1 - i) % every === 0).map(r => r.k)).tickFormat(k => `’${String(k).slice(2)}`));
     if (capLine != null) {
       svg.append("line").attr("class", "limit-line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", y(capLine)).attr("y2", y(capLine)).style("stroke", css("--ink-2"));
     }
@@ -443,7 +518,8 @@
     svg.append("g").attr("class", "grid").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.l - m.r)).tickFormat(""));
     svg.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickSize(0).tickPadding(6));
     svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(6).tickSize(0).tickPadding(8));
-    svg.append("text").attr("class", "lbl-m").attr("x", W - m.r).attr("y", H - 6).attr("text-anchor", "end").text(t("to.x"));
+    const xl = svg.append("text").attr("class", "lbl-m").attr("x", W - m.r).attr("y", H - 6).attr("text-anchor", "end").text(t("to.x"));
+    if (xl.node().getComputedTextLength() > W - m.l - m.r - 30) xl.text(t("to.x.short"));
     svg.append("text").attr("class", "lbl-m").attr("x", m.l).attr("y", 10).text(t("to.y", { n }));
     const order = ["persistence", "weekday", "v1", "v2"];
     order.forEach(k => {
@@ -524,7 +600,8 @@
         <div class="row"><span>${t("m.v1")}</span><span>${fmt(r.v1_mae, 1)}</span></div>
         <div class="row"><span>${t("m.v2")}</span><span>${fmt(r.v2_mae, 1)}</span></div>`, ev))
       .on("pointerleave", hideTip);
-    svg.append("text").attr("class", "lbl-m").attr("x", x(0) + 4).attr("y", H - 2).text(`← ${t("st.baseline")}`);
+    const bl = svg.append("text").attr("class", "lbl-m").attr("x", x(0) + 4).attr("y", H - 2).text(`← ${t("st.baseline")}`);
+    if (x(0) + 4 + bl.node().getComputedTextLength() > W) bl.attr("x", x(0) - 4).attr("text-anchor", "end").text(`${t("st.baseline")} →`);
     legend($("#stLegend"), [[t("m.v1"), C.v1, "dot"], [t("m.v2"), C.v2, "dot"]]);
   }
 
@@ -596,7 +673,12 @@
   }
 
   // ------------------------------------------------------------------ boot
-  function renderCharts() { if (!F) return; renderHero(); renderStory(); renderEvidence(); }
+  function renderCharts() {
+    if (!F) return;
+    const s = station(sel);
+    if (s && s.status === "ok") renderHistory(s);
+    renderStory(); renderEvidence();
+  }
   function renderAll() {
     applyStatic(); renderHero(); renderWeather(); renderMap(); renderStory(); renderEvidence(); renderHow();
   }
@@ -606,13 +688,15 @@
     lang = b.dataset.lang; store.set("lang", lang);
     if (F) renderAll(); else applyStatic();
   }));
-  $("#stationSelect").addEventListener("change", ev => select(Number(ev.target.value)));
 
-  let lastW = innerWidth, timer;
-  addEventListener("resize", () => {
-    if (Math.abs(innerWidth - lastW) < 8) return;
-    lastW = innerWidth; clearTimeout(timer); timer = setTimeout(renderCharts, 160);
-  });
+  // Redraw the charts whenever the width of the page content really changes (window resize, zoom, rotation).
+  let lastW = 0, timer;
+  new ResizeObserver(([e]) => {
+    const w = Math.round(e.contentRect.width);
+    if (!lastW) { lastW = w; return; }
+    if (Math.abs(w - lastW) < 2) return;
+    lastW = w; clearTimeout(timer); timer = setTimeout(renderCharts, 120);
+  }).observe(document.querySelector("main"));
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => location.reload());
 
   const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { rootMargin: "0px 0px -8% 0px" });
@@ -626,7 +710,6 @@
       if (!station(sel) || station(sel).status !== "ok") sel = (F.stations.find(s => s.status === "ok") || F.stations[0]).id;
       $("#status").hidden = true; $("#hero").hidden = false;
       renderAll();
-      if (document.fonts) document.fonts.ready.then(() => fitSelect($("#stationSelect")));
     })
     .catch(err => { console.error(err); $("#status").textContent = t("error"); });
 })();
