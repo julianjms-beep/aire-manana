@@ -113,7 +113,7 @@
     probe.style.cssText = `position:absolute;visibility:hidden;white-space:nowrap;font:${cs.font};letter-spacing:${cs.letterSpacing}`;
     probe.textContent = select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : "";
     document.body.appendChild(probe);
-    select.style.width = `${Math.ceil(probe.getBoundingClientRect().width) + 48}px`;
+    select.style.width = `${probe.offsetWidth + 49}px`;
     probe.remove();
   }
 
