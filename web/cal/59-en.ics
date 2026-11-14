@@ -1,0 +1,25 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//AireManana//NO2 forecast Madrid//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:AireMañana · Juan Carlos I
+X-WR-CALDESC:Tomorrow's NO₂ at Juan Carlos I\, Madrid. Updated every even
+ ing after 18:30.
+X-WR-TIMEZONE:Europe/Madrid
+REFRESH-INTERVAL;VALUE=DURATION:PT1H
+X-PUBLISHED-TTL:PT1H
+BEGIN:VEVENT
+UID:2026-11-15-st59-en@aire-manana
+DTSTAMP:20261114T140529Z
+DTSTART;VALUE=DATE:20261115
+DTEND;VALUE=DATE:20261116
+SUMMARY:🟢 Outdoor PE OK · 6 µg/m³
+DESCRIPTION:Outdoor PE and recess are fine.\nLikely range: 4–9 µg/m³\nC
+ hance above the EU limit (50 µg/m³): <1 %\nCleanest school hours: 14:00
+ –16:00 (typical shape of the day)\nhttps://julianjms-beep.github.io/aire
+ -manana/?st=59&lang=en\nPrototype\, not medical advice.
+URL:https://julianjms-beep.github.io/aire-manana/?st=59&lang=en
+TRANSP:TRANSPARENT
+END:VEVENT
+END:VCALENDAR

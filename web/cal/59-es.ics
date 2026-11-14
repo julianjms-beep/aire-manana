@@ -1,0 +1,26 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//AireManana//NO2 forecast Madrid//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:AireMañana · Juan Carlos I
+X-WR-CALDESC:El NO₂ de mañana en Juan Carlos I (Madrid). Se actualiza ca
+ da tarde después de las 18:30.
+X-WR-TIMEZONE:Europe/Madrid
+REFRESH-INTERVAL;VALUE=DURATION:PT1H
+X-PUBLISHED-TTL:PT1H
+BEGIN:VEVENT
+UID:2026-11-15-st59-es@aire-manana
+DTSTAMP:20261114T140529Z
+DTSTART;VALUE=DATE:20261115
+DTEND;VALUE=DATE:20261116
+SUMMARY:🟢 EF fuera: sí · 6 µg/m³
+DESCRIPTION:Educación Física y recreo\, al aire libre.\nRango probable: 4
+ –9 µg/m³\nProbabilidad de superar el límite UE (50 µg/m³): <1 %\nHo
+ ras más limpias del horario escolar: 14:00–16:00 (forma típica del dí
+ a)\nhttps://julianjms-beep.github.io/aire-manana/?st=59&lang=es\nPrototipo
+ \, no es consejo médico.
+URL:https://julianjms-beep.github.io/aire-manana/?st=59&lang=es
+TRANSP:TRANSPARENT
+END:VEVENT
+END:VCALENDAR

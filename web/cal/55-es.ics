@@ -1,0 +1,12 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//AireManana//NO2 forecast Madrid//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:AireMañana · Urb. Embajada
+X-WR-CALDESC:El NO₂ de mañana en Urb. Embajada (Madrid). Se actualiza ca
+ da tarde después de las 18:30.
+X-WR-TIMEZONE:Europe/Madrid
+REFRESH-INTERVAL;VALUE=DURATION:PT1H
+X-PUBLISHED-TTL:PT1H
+END:VCALENDAR

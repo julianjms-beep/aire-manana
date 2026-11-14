@@ -2,6 +2,10 @@
 
     python make_site_data.py evaluate   # once: test-period results -> web/data/evaluation.json + data/residuals.json
     python make_site_data.py live       # every evening: tomorrow's forecast for all 24 stations -> web/data/forecast.json
+                                        #   (also rewrites the calendar feeds, see `calendars`)
+    python make_site_data.py profiles   # once: typical hour-by-hour shape of NO2 per station -> web/data/profiles.json
+    python make_site_data.py schools    # once: Madrid's schools and their nearest station -> web/data/schools.json
+    python make_site_data.py calendars  # calendar feeds (.ics) per station from forecast.json + log.csv -> web/cal/
 
 The numbers in `evaluate` are the same as in the notebook AireManana.ipynb (same splits, model and thresholds).
 """
@@ -17,7 +21,7 @@ import pandas as pd
 from forecast_model import (_HOLIDAYS, LIMIT, AireManana, baseline_persistence, baseline_weekday_rule, build_table,
                             scores)
 from live import forecast_tomorrow
-from madrid_data import STATIONS, realtime_hourly, weather_live
+from madrid_data import NO2, STATIONS, read_history, realtime_hourly, weather_live
 
 WEB = Path("web/data")
 STATION = 8                                   # Escuelas Aguirre, the station the model is trained on
@@ -241,6 +245,7 @@ def live():
     out["track_record"] = update_log(out, measured)
     (WEB / "forecast.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")))
     print(f"forecast.json written · issued {out['issued']} for {out['tomorrow']}")
+    calendars()
 
 
 def update_log(out: dict, measured: dict) -> dict:
@@ -249,7 +254,8 @@ def update_log(out: dict, measured: dict) -> dict:
     path = WEB / "log.csv"
     new = pd.DataFrame([{"issued": out["today"], "for_day": out["tomorrow"], "station": s["id"],
                          "forecast": s["forecast"], "low": s["low"], "high": s["high"], "p_exceed": s["p_exceed"],
-                         "alert": s["alert"]} for s in out["stations"] if s["status"] == "ok"])
+                         "alert": s["alert"], "persistence": s["today_so_far"]}
+                        for s in out["stations"] if s["status"] == "ok"])
     log = pd.read_csv(path) if path.exists() else new.assign(measured=np.nan).iloc[:0]
     log = pd.concat([log[log["issued"] != out["today"]], new], ignore_index=True)
     old = log["measured"] if "measured" in log else pd.Series(np.nan, index=log.index)
@@ -257,13 +263,229 @@ def update_log(out: dict, measured: dict) -> dict:
                        for r, m in zip(log.itertuples(), old)]
     log.to_csv(path, index=False)
     done = log.dropna(subset=["measured"])
+    base = done.dropna(subset=["persistence"]) if "persistence" in done else done.iloc[:0]   # baseline saved since 14-11
     main = done[done["station"] == STATION].sort_values("for_day")
     return {"since": str(log["issued"].min()), "published": int(log["issued"].nunique()),
             "verified_days": int(done["for_day"].nunique()), "verified_forecasts": int(len(done)),
             "mae": r1(np.mean(np.abs(done["forecast"] - done["measured"]))) if len(done) else None,
+            "mae_persistence": (r1(np.mean(np.abs(base["persistence"] - base["measured"]))) if len(base) else None),
+            "mae_same_rows": (r1(np.mean(np.abs(base["forecast"] - base["measured"]))) if len(base) else None),
+            "alerts": int(log["alert"].astype(str).eq("True").sum()),
             "main_station": [{"day": r.for_day, "forecast": r1(r.forecast), "measured": r1(r.measured)}
                              for r in main.tail(14).itertuples()]}
 
 
+# ---------------------------------------------------------------------------------------------- profiles
+SCHOOL_HOURS = range(9, 17)                  # clock hours 09:00-17:00 (Madrid's hourly files: H10 = 09:00-10:00)
+WINDOWS = list(range(9, 16))                 # 2-hour PE windows that start at 09:00 ... 15:00
+
+
+def day_type(dates: pd.Series) -> pd.Series:
+    """0 = school day (Mon-Fri, not a holiday), 1 = Saturday, 2 = Sunday or public holiday."""
+    hol = dates.dt.date.map(lambda d: d in _HOLIDAYS)
+    return np.where(hol | (dates.dt.day_of_week == 6), 2, np.where(dates.dt.day_of_week == 5, 1, 0))
+
+
+def season(dates: pd.Series) -> np.ndarray:
+    """0 = cold half of the year (October-March), 1 = warm half (April-September)."""
+    return np.where(dates.dt.month.isin([4, 5, 6, 7, 8, 9]), 1, 0)
+
+
+def hourly_table(hourly: pd.DataFrame) -> pd.DataFrame:
+    """One row per station and day, 24 columns = NO2 of each clock hour (0 = 00:00-01:00). Days with a missing
+    hour are dropped, so every day has a complete shape."""
+    h = hourly[(hourly["pollutant"] == NO2) & hourly["station"].isin(STATIONS)]
+    w = h.pivot_table(index=["station", "date"], columns="hour", values="value").dropna()
+    w.columns = [c - 1 for c in w.columns]
+    w = w.reset_index()
+    w["day_type"], w["season"] = day_type(w["date"]), season(w["date"])
+    return w
+
+
+def best_window(shape) -> int:
+    """Start hour of the 2-hour school window with the lowest NO2 in a 24-value shape."""
+    return min(WINDOWS, key=lambda a: shape[a] + shape[a + 1])
+
+
+def profiles():
+    """Typical shape of a day at each station (hour value / day mean), learned on the same years as the model
+    (Jul 2020 - Feb 2024), then checked on the test period: was the suggested PE window really cleaner?"""
+    w = hourly_table(read_history())
+    hrs = list(range(24))
+    w["mean"] = w[hrs].mean(axis=1)
+    learn = w[(w["date"] >= FINAL_TRAIN[0]) & (w["date"] <= FINAL_TRAIN[1]) & (w["mean"] >= 5)]
+    ratio = learn[hrs].div(learn["mean"], axis=0)
+    shape = ratio.groupby([learn["station"], learn["day_type"], learn["season"]]).mean()
+    shape = shape.div(shape.mean(axis=1), axis=0)                      # each shape averages exactly 1
+
+    # check on the test period, school days only (the same days the forecast was tested on)
+    test = w[(w["date"] >= TEST_FROM) & (w["day_type"] == 0)].copy()
+    pick_of = {k: WINDOWS.index(best_window(shape.loc[k].to_numpy())) for k in shape.index}
+    keys = list(zip(test["station"], [0] * len(test), test["season"]))
+    ok = np.array([k in pick_of for k in keys])
+    test, keys = test[ok], [k for k, o in zip(keys, ok) if o]
+    V = test[hrs].to_numpy()
+    win = np.stack([(V[:, a] + V[:, a + 1]) / 2 for a in WINDOWS], axis=1)       # NO2 in each 2-hour window
+    p = np.array([pick_of[k] for k in keys])
+    picked = win[np.arange(len(win)), p]
+    rank = (win < picked[:, None]).sum(axis=1) + 1
+    ev = pd.DataFrame({"station": test["station"].to_numpy(), "date": test["date"].to_numpy(), "picked": picked,
+                       "best": win.min(axis=1), "worst": win.max(axis=1), "morning": win[:, 0],
+                       "school_day": V[:, list(SCHOOL_HOURS)].mean(axis=1), "hit": rank == 1, "rank": rank})
+    check = {
+        "station_days": int(len(ev)), "stations": int(ev["station"].nunique()),
+        "from": f"{ev['date'].min():%Y-%m-%d}", "to": f"{ev['date'].max():%Y-%m-%d}",
+        "picked": r1(ev["picked"].mean()), "school_day": r1(ev["school_day"].mean()), "morning": r1(ev["morning"].mean()),
+        "best_possible": r1(ev["best"].mean()), "worst": r1(ev["worst"].mean()),
+        "less_than_school_day_pct": r1(100 * (1 - ev["picked"].mean() / ev["school_day"].mean())),
+        "less_than_morning_pct": r1(100 * (1 - ev["picked"].mean() / ev["morning"].mean())),
+        "was_cleanest_pct": r1(100 * ev["hit"].mean()), "top2_pct": r1(100 * (ev["rank"] <= 2).mean()),
+        "cleaner_than_school_day_pct": r1(100 * (ev["picked"] < ev["school_day"]).mean()),
+    }
+    out = {"note": "hour value / day mean, learned Jul 2020 - Feb 2024; hour 0 = 00:00-01:00",
+           "windows": WINDOWS, "check": check,
+           "shape": {str(st): {f"{dt}{se}": [round(float(x), 3) for x in shape.loc[(st, dt, se)]]
+                               for (s2, dt, se) in shape.index if s2 == st}
+                     for st in sorted({k[0] for k in shape.index})}}
+    (WEB / "profiles.json").write_text(json.dumps(out, separators=(",", ":")))
+    print(json.dumps(check, indent=1))
+
+
+# ---------------------------------------------------------------------------------------------- schools
+SCHOOLS_URL = "https://datos.madrid.es/egob/catalogo/300614-0-centros-educativos.csv"
+SCHOOL_TYPES = ["ColegiosPublicos", "ColegiosPrivadosConcertados", "InstitutosEnseñanzaSecundaria",
+                "EscuelasInfantilesPublicas", "EscuelasInfantilesPrivadasGuarderias",
+                "CentrosPublicosEducacionEspecial", "CentrosPrivadosConcertadosEducacionEspecial"]
+SHORT = [("Instituto de Educación Secundaria (IES) ", "IES "), ("Colegio Público de Educación Especial ", "CPEE "),
+         ("Colegio Público ", "CEIP "), ("Escuela infantil municipal ", "Escuela Infantil Municipal ")]
+
+
+def km(lat1, lon1, lat2, lon2):
+    """Great-circle distance in km."""
+    p1, p2, dl = np.radians(lat1), np.radians(lat2), np.radians(np.asarray(lon2) - lon1)
+    a = np.sin((p2 - p1) / 2) ** 2 + np.cos(p1) * np.cos(p2) * np.sin(dl / 2) ** 2
+    return 6371 * 2 * np.arcsin(np.sqrt(a))
+
+
+def schools():
+    """Madrid City Council's list of schools and nurseries (CC BY 4.0) + the nearest of the 24 stations."""
+    import io
+    import requests
+    raw = requests.get(SCHOOLS_URL, headers={"User-Agent": "Mozilla/5.0"}, timeout=120).content
+    d = pd.read_csv(io.BytesIO(raw), sep=";", encoding="latin1", dtype=str)
+    d["kind"] = d["TIPO"].fillna("").str.rsplit("/", n=1).str[-1]
+    d = d[d["kind"].isin(SCHOOL_TYPES)].copy()
+    d["lat"], d["lon"] = pd.to_numeric(d["LATITUD"], errors="coerce"), pd.to_numeric(d["LONGITUD"], errors="coerce")
+    d = d.dropna(subset=["lat", "lon"])
+    d = d[d["lat"].between(40.2, 40.7) & d["lon"].between(-3.95, -3.5)]
+    st = pd.read_csv("data/stations.csv")
+    st = st[st["station"].isin(STATIONS)]
+    dist = np.stack([km(r.lat, r.lon, d["lat"].to_numpy(), d["lon"].to_numpy()) for r in st.itertuples()], axis=1)
+    d["station"] = st["station"].to_numpy()[dist.argmin(axis=1)]
+    d["km"] = dist.min(axis=1)
+
+    def short(n):
+        n = " ".join(str(n).split())
+        for a, b in SHORT:
+            if n.startswith(a):
+                return b + n[len(a):]
+        return n
+
+    d = d.sort_values("NOMBRE")
+    rows = [[int(r.PK), short(r.NOMBRE), SCHOOL_TYPES.index(r.kind), round(r.lat, 5), round(r.lon, 5), int(r.station),
+             round(float(r.km), 2), str(r.DISTRITO).title() if isinstance(r.DISTRITO, str) else "",
+             str(r.BARRIO).title() if isinstance(r.BARRIO, str) else ""] for r in d.itertuples()]
+    out = {"source": "Ayuntamiento de Madrid, Centros educativos (datos.madrid.es, CC BY 4.0)",
+           "downloaded": f"{pd.Timestamp.now():%Y-%m-%d}", "types": SCHOOL_TYPES,
+           "fields": ["id", "name", "type", "lat", "lon", "station", "km", "district", "neighbourhood"], "schools": rows}
+    (WEB / "schools.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")))
+    print(f"{len(rows)} schools · median distance to the nearest station {d['km'].median():.1f} km · "
+          f"{(d['km'] <= 2).mean():.0%} within 2 km · max {d['km'].max():.1f} km")
+    print(d["kind"].value_counts().to_string())
+
+
+# ---------------------------------------------------------------------------------------------- calendars
+SITE = "https://julianjms-beep.github.io/aire-manana/"
+CAL = Path("web/cal")
+CAL_TEXT = {
+    "en": {"ok": "🟢 Outdoor PE OK", "watch": "🟡 Outdoor OK, keep an eye", "alert": "🔴 PE indoors",
+           "verdict": {"ok": "Outdoor PE and recess are fine.", "watch": "Outdoor activity is fine — keep an eye on it.",
+                       "alert": "Move PE and recess indoors."},
+           "range": "Likely range", "chance": "Chance above the EU limit (50 µg/m³)", "best": "Cleanest school hours", "best_free": "Cleanest daytime hours (no school tomorrow)",
+           "measured": "measured", "name": "AireMañana · {s}", "desc": "Tomorrow's NO₂ at {s}, Madrid. Updated every evening after 18:30.",
+           "note": "Prototype, not medical advice.", "typical": "(typical shape of the day)"},
+    "es": {"ok": "🟢 EF fuera: sí", "watch": "🟡 EF fuera, vigilar", "alert": "🔴 EF dentro",
+           "verdict": {"ok": "Educación Física y recreo, al aire libre.", "watch": "Se puede salir — pero conviene vigilarlo.",
+                       "alert": "Educación Física y recreo, mejor dentro."},
+           "range": "Rango probable", "chance": "Probabilidad de superar el límite UE (50 µg/m³)",
+           "best": "Horas más limpias del horario escolar",
+           "best_free": "Horas más limpias del día (mañana no hay cole)", "measured": "medido",
+           "name": "AireMañana · {s}", "desc": "El NO₂ de mañana en {s} (Madrid). Se actualiza cada tarde después de las 18:30.",
+           "note": "Prototipo, no es consejo médico.", "typical": "(forma típica del día)"},
+}
+
+
+def level(forecast, alert) -> str:
+    return "alert" if alert else "watch" if forecast >= 35 else "ok"
+
+
+def _ics_text(x: str) -> str:
+    return str(x).replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
+
+
+def _fold(line: str) -> str:
+    """RFC 5545: lines longer than 75 octets continue on the next line after a space."""
+    out, cur = [], b""
+    for ch in line:
+        c = ch.encode()
+        if len(cur) + len(c) > (75 if not out else 74):
+            out.append(cur.decode())
+            cur = b""
+        cur += c
+    out.append(cur.decode())
+    return "\r\n ".join(out)
+
+
+def calendars():
+    """One subscribable calendar per station and language. Each evening's run adds tomorrow's event and keeps the
+    last 14 days (with the measured value once known), so a teacher sees the decision in their own calendar app."""
+    F = json.loads((WEB / "forecast.json").read_text())
+    log = pd.read_csv(WEB / "log.csv")
+    P = json.loads((WEB / "profiles.json").read_text())
+    tomorrow = pd.Timestamp(F["tomorrow"])
+    dt_key = f"{day_type(pd.Series([tomorrow]))[0]}{season(pd.Series([tomorrow]))[0]}"
+    stamp = pd.Timestamp.now(tz="UTC").strftime("%Y%m%dT%H%M%SZ")
+    CAL.mkdir(parents=True, exist_ok=True)
+    keep = log[log["for_day"] >= f"{tomorrow - pd.Timedelta(days=14):%Y-%m-%d}"]
+    for s in F["stations"]:
+        shape = P["shape"].get(str(s["id"]), {}).get(dt_key)
+        start = best_window(shape) if shape else None
+        for lang, T in CAL_TEXT.items():
+            ev = []
+            for r in keep[keep["station"] == s["id"]].sort_values("for_day").itertuples():
+                lv = level(r.forecast, str(r.alert) == "True")
+                title = f"{T[lv]} · {r.forecast:.0f} µg/m³"
+                if pd.notna(r.measured):
+                    title += f" ({T['measured']} {r.measured:.0f})"
+                desc = [T["verdict"][lv], f"{T['range']}: {r.low:.0f}–{r.high:.0f} µg/m³",
+                        f"{T['chance']}: {'<1' if r.p_exceed < 0.01 else f'{100 * r.p_exceed:.0f}'} %"]
+                if r.for_day == F["tomorrow"] and start is not None:
+                    label = T["best"] if dt_key[0] == "0" else T["best_free"]
+                    desc.append(f"{label}: {start:02d}:00–{start + 2:02d}:00 {T['typical']}")
+                desc += [f"{SITE}?st={s['id']}&lang={lang}", T["note"]]
+                d0 = pd.Timestamp(r.for_day)
+                ev += ["BEGIN:VEVENT", f"UID:{r.for_day}-st{s['id']}-{lang}@aire-manana", f"DTSTAMP:{stamp}",
+                       f"DTSTART;VALUE=DATE:{d0:%Y%m%d}", f"DTEND;VALUE=DATE:{d0 + pd.Timedelta(days=1):%Y%m%d}",
+                       f"SUMMARY:{_ics_text(title)}", f"DESCRIPTION:{_ics_text(chr(10).join(desc))}",
+                       f"URL:{SITE}?st={s['id']}&lang={lang}", "TRANSP:TRANSPARENT", "END:VEVENT"]
+            lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//AireManana//NO2 forecast Madrid//EN",
+                     "CALSCALE:GREGORIAN", "METHOD:PUBLISH", f"X-WR-CALNAME:{_ics_text(T['name'].format(s=s['name']))}",
+                     f"X-WR-CALDESC:{_ics_text(T['desc'].format(s=s['name']))}", "X-WR-TIMEZONE:Europe/Madrid",
+                     "REFRESH-INTERVAL;VALUE=DURATION:PT1H", "X-PUBLISHED-TTL:PT1H", *ev, "END:VCALENDAR"]
+            (CAL / f"{s['id']}-{lang}.ics").write_bytes(("\r\n".join(_fold(x) for x in lines) + "\r\n").encode())
+    print(f"calendars written for {len(F['stations'])} stations × 2 languages -> {CAL}/")
+
+
 if __name__ == "__main__":
-    {"evaluate": evaluate, "live": live}[sys.argv[1] if len(sys.argv) > 1 else "live"]()
+    {"evaluate": evaluate, "live": live, "profiles": profiles, "schools": schools,
+     "calendars": calendars}[sys.argv[1] if len(sys.argv) > 1 else "live"]()

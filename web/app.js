@@ -14,7 +14,8 @@
   let lang = new URLSearchParams(location.search).get("lang") || store.get("lang")
     || ((navigator.language || "en").toLowerCase().startsWith("es") ? "es" : "en");
   if (!I18N[lang]) lang = "en";
-  let F = null, E = null, sel = MAIN, map = null, markers = {};
+  let F = null, E = null, P = null, SCH = null, LOG = null, school = null, sel = MAIN, map = null, markers = {}, schoolMarker = null;
+  const params = new URLSearchParams(location.search);
 
   // ------------------------------------------------------------------ helpers
   const t = (key, vars = {}) => String((I18N[lang] || {})[key] ?? I18N.en[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
@@ -71,6 +72,21 @@
     document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
     document.querySelectorAll(".lang button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
     $("#notebookLink").href = COLAB; $("#colabLink").href = COLAB; $("#repoLink").href = REPO;
+    $("#schoolInput").placeholder = t("school.ph", { n: fmt(SCH ? SCH.length : 1253) });
+    $("#schoolInput").setAttribute("aria-label", t("school.label"));
+    $("#schoolClear").setAttribute("aria-label", t("school.clear")); $("#shareClose").setAttribute("aria-label", t("share.close"));
+    $("#liveLog").href = `${REPO}/blob/main/web/data/log.csv`; $("#liveCommits").href = `${REPO}/commits/main/web/data/log.csv`;
+  }
+  function toast(msg) {
+    const el = $("#toast"); el.textContent = msg; el.classList.add("on");
+    clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("on"), 1800);
+  }
+  async function copyText(x, msg) {
+    try { await navigator.clipboard.writeText(x); } catch {
+      const ta = Object.assign(document.createElement("textarea"), { value: x }); document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch { /* nothing else to try */ } ta.remove();
+    }
+    toast(msg);
   }
 
   // ------------------------------------------------------------------ 1 · hero
@@ -82,6 +98,7 @@
     $("#heroDay").textContent = t("hero.for", { day: dname(F.tomorrow, { weekday: "long", day: "numeric", month: "long" }) });
     renderPicker(s);
     $("#stationMeta").textContent = [typeName(s.type), s.address].filter(Boolean).join(" · ");
+    renderSchoolChip(); updateActions(s);
 
     const v = $("#verdict");
     v.className = `verdict ${ok ? lv : ""}`;
@@ -90,7 +107,7 @@
       $("#verdictTitle").textContent = t("map.nodata"); $("#verdictSub").textContent = t("nodata");
       ["#statChance", "#statRange", "#statToday"].forEach(id => { $(id).textContent = "–"; });
       $("#statTodayNote").textContent = ""; $("#scale").innerHTML = ""; $("#why").innerHTML = "";
-      d3.select("#histChart").selectAll("*").remove();
+      d3.select("#histChart").selectAll("*").remove(); renderBest(null);
       return;
     }
     countTo($("#bigNum"), s.forecast);
@@ -102,8 +119,198 @@
     $("#statTodayNote").textContent = t("stat.today.note", { h: s.hours_today });
     renderScale(s);
     renderHistory(s);
+    renderBest(s);
     renderWhy(s);
   }
+
+  // ------------------------------------------------------------------ best time of day for outdoor PE
+  function tomorrowKey() {
+    const d = day(F.tomorrow), wd = d.getDay();
+    const type = F.holiday_tomorrow || wd === 0 ? 2 : wd === 6 ? 1 : 0;
+    return { type, key: `${type}${d.getMonth() >= 3 && d.getMonth() <= 8 ? 1 : 0}` };
+  }
+  function bestFor(s) {
+    if (!P || !s || s.status !== "ok") return null;
+    const { type, key } = tomorrowKey();
+    const shape = (P.shape[String(s.id)] || {})[key];
+    if (!shape) return null;
+    const est = shape.map(r => s.forecast * r);
+    const a = P.windows.reduce((b, w) => (shape[w] + shape[w + 1] < shape[b] + shape[b + 1] ? w : b), P.windows[0]);
+    return { type, est, a, v: (est[a] + est[a + 1]) / 2, morning: (est[9] + est[10]) / 2, label: `${a}:00–${a + 2}:00` };
+  }
+  function renderBest(s) {
+    const b = bestFor(s), card = $("#bestChart").closest(".card");
+    card.hidden = !b;
+    if (!b) return;
+    $("#bestTitle").textContent = t(b.type === 0 ? "best.title" : "best.titlefree");
+    $("#bestPill").textContent = b.label;
+    const free = b.type === 0 ? "" : `${t("best.free", { day: dname(F.tomorrow, { weekday: "long" }) })} `;
+    $("#bestSub").textContent = free + (s.forecast < 20 ? t("best.subclean", { v: fmt(b.v) }) : t("best.sub", { v: fmt(b.v), m: fmt(b.morning) }));
+    $("#bestNote").textContent = t("best.note", { n: fmt(P.check.station_days), p: fmt(P.check.less_than_school_day_pct) });
+
+    const el = $("#bestChart"), W = el.clientWidth, H = 150, m = { t: 22, r: 14, b: 22, l: 28 };
+    const x = d3.scaleLinear().domain([0, 24]).range([m.l, W - m.r]);
+    const y = d3.scaleLinear().domain([0, Math.max(10, d3.max(b.est) * 1.15)]).nice(3).range([H - m.b, m.t]);
+    const svg = svgIn(el, W, H);
+    svg.append("rect").attr("class", "best-band").attr("x", x(9)).attr("width", x(17) - x(9)).attr("y", m.t - 14).attr("height", H - m.b - m.t + 14).attr("rx", 6);
+    svg.append("text").attr("class", "lbl-m").attr("x", x(9) + 6).attr("y", m.t - 4).text(t("best.school"));
+    svg.append("rect").attr("class", "best-win").attr("x", x(b.a)).attr("width", x(b.a + 2) - x(b.a)).attr("y", m.t).attr("height", H - m.b - m.t).attr("rx", 5);
+    svg.append("g").attr("class", "grid").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(3).tickSize(-(W - m.l - m.r)).tickFormat(""));
+    svg.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(3).tickSize(0).tickPadding(6));
+    const pts = b.est.map((v, h) => [h + 0.5, v]);
+    svg.append("path").attr("class", "best-area").attr("d", d3.area().x(d => x(d[0])).y0(y(0)).y1(d => y(d[1])).curve(d3.curveMonotoneX)(pts));
+    svg.append("path").attr("class", "best-line").attr("d", d3.line().x(d => x(d[0])).y(d => y(d[1])).curve(d3.curveMonotoneX)(pts));
+    svg.append("circle").attr("cx", x(b.a + 1)).attr("cy", y(b.v)).attr("r", 4.5).attr("fill", css("--good")).attr("stroke", css("--surface")).attr("stroke-width", 2);
+    svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - m.b})`)
+      .call(d3.axisBottom(x).tickValues(W < 360 ? [0, 9, 17, 24] : [0, 6, 9, 12, 15, 17, 21, 24]).tickSize(0).tickPadding(7).tickFormat(h => `${h}h`));
+    svg.append("g").selectAll("rect").data(d3.range(24)).join("rect").attr("x", h => x(h)).attr("width", x(1) - x(0)).attr("y", m.t).attr("height", H - m.b - m.t)
+      .attr("fill", "transparent")
+      .on("pointermove", (ev, h) => showTip(t("best.hour", { h, h2: h + 1, v: fmt(b.est[h]) }), ev)).on("pointerleave", hideTip);
+  }
+
+  // ------------------------------------------------------------------ actions: share, calendar, poster, install
+  const placeName = s => (school ? school.name : s.name);
+  function shareUrl() {
+    const u = new URL(location.pathname, location.origin);
+    if (school) u.searchParams.set("sc", school.id); else u.searchParams.set("st", sel);
+    u.searchParams.set("lang", lang);
+    return u.toString();
+  }
+  function calUrls(s) {
+    const https = new URL(`cal/${s.id}-${lang}.ics`, location.href).toString();
+    const webcal = https.replace(/^https?:/, "webcal:");
+    return { https, webcal, google: `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcal)}`,
+      outlook: `https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(https)}&name=${encodeURIComponent(`AireMañana · ${s.name}`)}` };
+  }
+  function updateActions(s) {
+    const u = calUrls(s);
+    $("#calApple").href = u.webcal; $("#calGoogle").href = u.google; $("#calOutlook").href = u.outlook;
+    $("#actPoster").href = `poster.html?st=${s.id}${school ? `&sc=${school.id}` : ""}&lang=${lang}`;
+  }
+  const calBtn = $("#actCal"), calMenu = $("#calMenu");
+  const closeCal = () => { calMenu.hidden = true; calBtn.setAttribute("aria-expanded", "false"); };
+  calBtn.addEventListener("click", () => { calMenu.hidden = !calMenu.hidden; calBtn.setAttribute("aria-expanded", String(!calMenu.hidden)); });
+  calMenu.addEventListener("click", ev => { if (ev.target.closest("a")) setTimeout(closeCal, 50); });
+  $("#calCopy").addEventListener("click", () => { copyText(calUrls(station(sel)).https, t("cal.copied")); closeCal(); });
+  document.addEventListener("pointerdown", ev => { if (!calMenu.hidden && !ev.target.closest(".act-wrap")) closeCal(); });
+  document.addEventListener("keydown", ev => { if (ev.key === "Escape" && !calMenu.hidden) { closeCal(); calBtn.focus(); } });
+
+  let installEvt = null;
+  addEventListener("beforeinstallprompt", ev => { ev.preventDefault(); installEvt = ev; $("#actInstall").hidden = false; });
+  $("#actInstall").addEventListener("click", async () => {
+    if (!installEvt) return;
+    installEvt.prompt(); await installEvt.userChoice.catch(() => null); installEvt = null; $("#actInstall").hidden = true;
+  });
+  addEventListener("appinstalled", () => { $("#actInstall").hidden = true; });
+
+  // Share image (1080 × 1350) drawn on a canvas, always in the light theme so it reads well in any chat.
+  function wrapText(ctx, text, maxW, maxLines) {
+    const words = String(text).split(" "), lines = [];
+    let cur = "";
+    for (const w of words) {
+      const next = cur ? `${cur} ${w}` : w;
+      if (ctx.measureText(next).width > maxW && cur) { lines.push(cur); cur = w; } else cur = next;
+    }
+    lines.push(cur);
+    if (lines.length > maxLines) {
+      const keep = lines.slice(0, maxLines);
+      let last = keep[maxLines - 1];
+      while (ctx.measureText(`${last}…`).width > maxW && last.length) last = last.slice(0, -1);
+      keep[maxLines - 1] = `${last.trim()}…`;
+      return keep;
+    }
+    return lines;
+  }
+  function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); }
+  async function shareImage(s) {
+    const C = { bg: "#F5F4EF", ink: "#101317", ink2: "#3E444C", muted: "#7C828B", line: "#E4E1D9",
+      ok: ["#14A06B", "#E2F3EB"], watch: ["#B7820C", "#FBF1DC"], alert: ["#DE3D33", "#FCE5E2"] };
+    try {
+      await Promise.all(['400 100px "Instrument Serif"', 'italic 400 40px "Instrument Serif"', '600 34px "Geist"', '400 30px "Geist"', '500 26px "Geist Mono"']
+        .map(f => document.fonts.load(f)));
+    } catch { /* system fonts are fine */ }
+    const W = 1080, H = 1350, P0 = 84, cv = document.createElement("canvas");
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext("2d"), lv = level(s), [col, soft] = C[lv], b = bestFor(s);
+    ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+    const g = ctx.createRadialGradient(W * 0.15, -80, 40, W * 0.15, -80, 900);
+    g.addColorStop(0, `${col}33`); g.addColorStop(1, `${col}00`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    // brand
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(P0 + 24, 104, 24, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = C.bg; ctx.lineWidth = 3.6; ctx.lineCap = "round";
+    const wave = (yy, a) => { ctx.globalAlpha = a; ctx.beginPath(); ctx.moveTo(P0 + 9, yy); ctx.bezierCurveTo(P0 + 16, yy - 7, P0 + 22, yy - 7, P0 + 24, yy); ctx.bezierCurveTo(P0 + 27, yy + 7, P0 + 33, yy + 7, P0 + 39, yy); ctx.stroke(); ctx.globalAlpha = 1; };
+    wave(110, 1); wave(99, 0.55);
+    ctx.fillStyle = C.ink; ctx.font = '600 34px "Geist", sans-serif'; ctx.textBaseline = "middle"; ctx.fillText("Aire", P0 + 62, 106);
+    const aw = ctx.measureText("Aire").width; ctx.font = 'italic 400 42px "Instrument Serif", serif'; ctx.fillText("Mañana", P0 + 64 + aw, 104);
+    ctx.font = '500 24px "Geist Mono", monospace'; ctx.fillStyle = C.muted; ctx.textAlign = "right";
+    ctx.fillText(dname(F.tomorrow, { weekday: "long", day: "numeric", month: "long" }).toUpperCase(), W - P0, 106);
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    // place
+    ctx.font = '400 84px "Instrument Serif", serif'; ctx.fillStyle = C.ink;
+    const lines = wrapText(ctx, placeName(s), W - 2 * P0, 2);
+    lines.forEach((l, i) => ctx.fillText(l, P0, 268 + i * 86));
+    let yy = 268 + (lines.length - 1) * 86 + 52;
+    ctx.font = '400 30px "Geist", sans-serif'; ctx.fillStyle = C.muted;
+    ctx.fillText(school ? `${t("share.station", { s: s.name })} · ${fmt(school.km, 1)} km` : typeName(s.type), P0, yy);
+    // number
+    yy += 330;
+    ctx.font = '400 360px "Instrument Serif", serif'; ctx.fillStyle = C.ink;
+    const num = String(Math.round(s.forecast)); ctx.fillText(num, P0 - 8, yy);
+    const nw = ctx.measureText(num).width;
+    ctx.font = '400 32px "Geist", sans-serif'; ctx.fillStyle = C.ink2;
+    wrapText(ctx, t("hero.unit"), 360, 2).forEach((l, i) => ctx.fillText(l, P0 + nw + 26, yy - 50 + i * 40));
+    // verdict pill
+    yy += 70;
+    ctx.font = '600 36px "Geist", sans-serif';
+    const vt = wrapText(ctx, t(`verdict.${lv}`), W - 2 * P0 - 110, 2);
+    const ph = 44 + vt.length * 46, pw = Math.min(W - 2 * P0, Math.max(...vt.map(l => ctx.measureText(l).width)) + 110);
+    ctx.fillStyle = soft; roundRect(ctx, P0, yy, pw, ph, 28); ctx.fill();
+    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(P0 + 46, yy + ph / 2, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = C.ink; vt.forEach((l, i) => ctx.fillText(l, P0 + 80, yy + 58 + i * 46));
+    yy += ph + 64;
+    // best window
+    if (b) {
+      ctx.font = '400 32px "Geist", sans-serif'; ctx.fillStyle = C.ink2;
+      ctx.fillText(t(b.type === 0 ? "share.best" : "share.bestfree", { w: b.label }), P0, yy); yy += 56;
+    }
+    // scale
+    const sx = P0, sw = W - 2 * P0, max = Math.max(80, Math.ceil((s.high * 1.1) / 10) * 10), px = v => sx + (Math.min(v, max) / max) * sw;
+    const gr = ctx.createLinearGradient(sx, 0, sx + sw, 0);
+    [[0, "#14A06B"], [0.22, "#6CC07A"], [0.44, "#D99E12"], [0.56, "#EC7430"], [0.66, "#DE3D33"], [1, "#A9233A"]].forEach(([o, c]) => gr.addColorStop(o, c));
+    yy = Math.max(yy, 1110);
+    ctx.fillStyle = gr; roundRect(ctx, sx, yy, sw, 14, 7); ctx.fill();
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(px(s.forecast), yy + 7, 15, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(px(s.forecast), yy + 7, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#DE3D33"; ctx.lineWidth = 2; ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.moveTo(px(F.limit), yy - 16); ctx.lineTo(px(F.limit), yy + 30); ctx.stroke(); ctx.setLineDash([]);
+    ctx.font = '500 22px "Geist Mono", monospace'; ctx.fillStyle = "#DE3D33"; ctx.textAlign = "center";
+    ctx.fillText(`${t("scale.limit")} ${F.limit}`, px(F.limit), yy - 26); ctx.textAlign = "left";
+    // footer
+    ctx.strokeStyle = C.line; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(P0, H - 150); ctx.lineTo(W - P0, H - 150); ctx.stroke();
+    ctx.font = '500 26px "Geist Mono", monospace'; ctx.fillStyle = C.ink; ctx.fillText("julianjms-beep.github.io/aire-manana", P0, H - 98);
+    ctx.font = '400 24px "Geist", sans-serif'; ctx.fillStyle = C.muted; ctx.fillText(t("share.foot"), P0, H - 58);
+    return new Promise(res => cv.toBlob(res, "image/png"));
+  }
+  let shareBlobUrl = null;
+  $("#actShare").addEventListener("click", async () => {
+    const s = station(sel); if (!s || s.status !== "ok") return;
+    const blob = await shareImage(s), url = shareUrl();
+    const text = t("share.text", { place: placeName(s), v: fmt(s.forecast), verdict: t(`verdict.${level(s)}`), url });
+    if (shareBlobUrl) URL.revokeObjectURL(shareBlobUrl);
+    shareBlobUrl = URL.createObjectURL(blob);
+    $("#shareImg").src = shareBlobUrl; $("#shareImg").alt = text;
+    $("#shareDl").href = shareBlobUrl;
+    $("#shareWa").href = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    const file = new File([blob], "airemanana.png", { type: "image/png" });
+    const canFiles = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+    const nat = $("#shareNative"); nat.hidden = !canFiles && !navigator.share;
+    nat.onclick = async () => {
+      try { await navigator.share(canFiles ? { files: [file], text } : { text, url }); } catch { /* cancelled */ }
+    };
+    $("#shareCopy").onclick = () => copyText(url, t("share.copied"));
+    $("#shareDialog").showModal();
+  });
+  $("#shareClose").addEventListener("click", () => $("#shareDialog").close());
+  $("#shareDialog").addEventListener("click", ev => { if (ev.target === ev.currentTarget) ev.currentTarget.close(); });
 
   // Station picker: a styled listbox (a native <select> would open its menu at the 52 px heading size).
   const pick = { btn: $("#pickBtn"), pop: $("#pickPop"), list: $("#pickList"), ids: [], active: -1, typed: "", typedAt: 0 };
@@ -335,9 +542,14 @@
       map.addControl(new maplibregl.AttributionControl({ compact: true }), "top-right");
       map.once("idle", () => document.querySelectorAll("#mapgl .maplibregl-ctrl-attrib").forEach(e => { e.classList.remove("maplibregl-compact-show"); e.removeAttribute("open"); }));
       $("#mapgl").addEventListener("click", ev => {
-        const b = ev.target.closest("[data-go]");
+        const b = ev.target.closest("[data-go]"), sb = ev.target.closest("[data-school]");
         if (b) { select(Number(b.dataset.go)); $("#forecast").scrollIntoView({ behavior: reduced ? "auto" : "smooth" }); }
+        if (sb && SCH) {
+          const x = SCH.find(r => r.id === Number(sb.dataset.school));
+          if (x) { setSchool(x, false); document.querySelectorAll(".map-school-pop").forEach(p => p.remove()); $("#forecast").scrollIntoView({ behavior: reduced ? "auto" : "smooth" }); }
+        }
       });
+      map.on("load", () => { addSchoolLayer(); showSchoolMarker(); });
     }
     Object.values(markers).forEach(mk => mk.remove()); markers = {};
     pts.forEach(s => {
@@ -379,7 +591,138 @@
       r.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(); } });
     });
   }
-  function select(id) { sel = id; renderHero(); refreshMapSelection(); }
+  function syncUrl() {
+    const u = new URL(location.href);
+    u.searchParams.delete("st"); u.searchParams.delete("sc");
+    if (school) u.searchParams.set("sc", school.id); else if (sel !== MAIN) u.searchParams.set("st", sel);
+    history.replaceState(null, "", u);
+  }
+  function select(id) {
+    if (school && school.station !== id) { school = null; showSchoolMarker(); }
+    sel = id; renderHero(); refreshMapSelection(); syncUrl();
+  }
+
+  // ------------------------------------------------------------------ schools
+  const SCHOOL_TYPES = { en: [], es: [] };
+  let schoolsP = null;
+  function loadSchools() {
+    return schoolsP || (schoolsP = fetch("data/schools.json").then(r => r.json()).then(j => {
+      SCH = j.schools.map(([id, name, type, lat, lon, st, kmv, district, hood]) => ({ id, name, type, lat, lon, station: st, km: kmv, district, hood }));
+      for (const l of ["en", "es"]) SCHOOL_TYPES[l] = [0, 1, 2, 3, 4, 5, 6].map(i => I18N[l][`school.t${i}`]);
+      SCH.forEach(x => { x.fname = fold(x.name); x.key = fold([x.name, SCHOOL_TYPES.en[x.type], SCHOOL_TYPES.es[x.type], x.district, x.hood].join(" ")); });
+      $("#schoolInput").placeholder = t("school.ph", { n: fmt(SCH.length) });
+      addSchoolLayer();
+      const sc = Number(params.get("sc"));
+      if (sc) { const x = SCH.find(r => r.id === sc); if (x) setSchool(x, false); }
+      if (document.activeElement === sch.input && sch.input.value.trim().length >= 2) renderSchoolList();
+    }).catch(err => console.warn("schools", err)));
+  }
+  const schoolType = x => t(`school.t${x.type}`);
+  function searchSchools(q) {
+    const toks = fold(q).split(/\s+/).filter(Boolean);
+    if (!toks.length || !SCH) return [];
+    const hits = [];
+    for (const x of SCH) if (toks.every(k => x.key.includes(k))) {
+      const i = x.fname.indexOf(toks[0]);
+      const score = (i === 0 ? 0 : i > 0 && x.fname[i - 1] === " " ? 1 : i > 0 ? 2 : 3) * 1000 + x.name.length;
+      hits.push([score, x]);
+    }
+    return hits.sort((a, b) => a[0] - b[0]).slice(0, 8).map(h => h[1]);
+  }
+  function highlight(name, q) {
+    const f = fold(name), toks = fold(q).split(/\s+/).filter(Boolean), on = new Array(name.length).fill(false);
+    toks.forEach(k => { let i = f.indexOf(k); while (i >= 0) { for (let j = i; j < i + k.length; j++) on[j] = true; i = f.indexOf(k, i + k.length); } });
+    let out = "", open = false;
+    [...name].forEach((ch, i) => { if (on[i] !== open) { out += on[i] ? "<mark>" : "</mark>"; open = on[i]; } out += esc(ch); });
+    return out + (open ? "</mark>" : "");
+  }
+  const sch = { input: $("#schoolInput"), list: $("#schoolList"), rows: [], active: -1 };
+  function renderSchoolList() {
+    const q = sch.input.value.trim();
+    sch.rows = q.length >= 2 ? searchSchools(q) : [];
+    sch.active = sch.rows.length ? 0 : -1;
+    if (q.length < 2) { sch.list.hidden = true; sch.input.setAttribute("aria-expanded", "false"); return; }
+    sch.list.innerHTML = sch.rows.length ? sch.rows.map((x, i) => {
+      const st = station(x.station);
+      return `<li role="option" id="sch-${x.id}" data-i="${i}" class="${i === 0 ? "active" : ""}" aria-selected="${i === 0}">${highlight(x.name, q)}
+        <small>${esc(schoolType(x))} · ${esc(x.district)} · ${esc(st ? st.name : "")} ${fmt(x.km, 1)} km</small></li>`;
+    }).join("") : `<li class="empty">${esc(t(SCH ? "school.none" : "loading"))}</li>`;
+    sch.list.hidden = false; sch.input.setAttribute("aria-expanded", "true");
+    if (sch.rows.length) sch.input.setAttribute("aria-activedescendant", `sch-${sch.rows[0].id}`); else sch.input.removeAttribute("aria-activedescendant");
+  }
+  function moveSchool(i) {
+    const items = [...sch.list.querySelectorAll("li[data-i]")];
+    if (!items.length) return;
+    sch.active = (i + items.length) % items.length;
+    items.forEach((li, j) => { li.classList.toggle("active", j === sch.active); li.setAttribute("aria-selected", String(j === sch.active)); });
+    items[sch.active].scrollIntoView({ block: "nearest" });
+    sch.input.setAttribute("aria-activedescendant", items[sch.active].id);
+  }
+  function closeSchoolList() { sch.list.hidden = true; sch.input.setAttribute("aria-expanded", "false"); }
+  function setSchool(x, focusChip = true) {
+    school = x; sch.input.value = ""; closeSchoolList();
+    sel = x.station; renderHero(); refreshMapSelection(); showSchoolMarker(); syncUrl();
+    if (focusChip) $("#schoolClear").focus({ preventScroll: true });
+  }
+  function clearSchool() {
+    school = null; renderSchoolChip(); showSchoolMarker(); syncUrl(); updateActions(station(sel));
+    sch.input.focus({ preventScroll: true });
+  }
+  function renderSchoolChip() {
+    $("#schoolChip").hidden = !school; $("#schoolSearch").hidden = !!school;
+    if (!school) return;
+    $("#schoolName").textContent = school.name;
+    $("#schoolMeta").textContent = school.km > 3 ? t("school.far", { d: fmt(school.km, 1) })
+      : `${schoolType(school)} · ${t("school.chip", { d: fmt(school.km, 1) })}`;
+  }
+  sch.input.addEventListener("input", renderSchoolList);
+  sch.input.addEventListener("focus", () => { if (!SCH) loadSchools(); if (sch.input.value.trim().length >= 2) renderSchoolList(); });
+  sch.input.addEventListener("keydown", ev => {
+    if (ev.key === "ArrowDown") { ev.preventDefault(); if (sch.list.hidden) renderSchoolList(); else moveSchool(sch.active + 1); }
+    else if (ev.key === "ArrowUp") { ev.preventDefault(); moveSchool(sch.active - 1); }
+    else if (ev.key === "Enter") { if (sch.rows[sch.active]) { ev.preventDefault(); setSchool(sch.rows[sch.active]); } }
+    else if (ev.key === "Escape") { if (!sch.list.hidden) { ev.preventDefault(); closeSchoolList(); } else sch.input.value = ""; }
+  });
+  sch.list.addEventListener("pointerdown", ev => ev.preventDefault());            // keep focus in the input
+  sch.list.addEventListener("click", ev => { const li = ev.target.closest("li[data-i]"); if (li) setSchool(sch.rows[Number(li.dataset.i)]); });
+  sch.input.addEventListener("blur", () => setTimeout(closeSchoolList, 120));
+  $("#schoolClear").addEventListener("click", clearSchool);
+
+  function schoolPopupHtml(x) {
+    const st = station(x.station), ok = st && st.status === "ok", lv = ok ? level(st) : "ok";
+    return `<div class="pop"><div class="pop-name">${esc(x.name)}</div><div class="pop-meta">${esc(schoolType(x))} · ${esc(x.district)}</div>
+      ${ok ? `<div class="pop-verdict ${lv}"><i></i>${t(`verdict.${lv}`)}</div>
+      <div class="pop-meta">${esc(st.name)} · ${fmt(x.km, 1)} km · ${fmt(st.forecast)} µg/m³</div>` : ""}
+      <button class="pop-btn" type="button" data-school="${x.id}">${t("map.open")} ↑</button></div>`;
+  }
+  function addSchoolLayer() {
+    if (!map || !SCH || !map.isStyleLoaded() || map.getSource("schools")) return;
+    map.addSource("schools", { type: "geojson", data: { type: "FeatureCollection", features: SCH.map(x => ({
+      type: "Feature", id: x.id, properties: { id: x.id }, geometry: { type: "Point", coordinates: [x.lon, x.lat] } })) } });
+    map.addLayer({ id: "schools", type: "circle", source: "schools", paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 1.6, 12, 3, 15, 6],
+      "circle-color": css("--accent"), "circle-opacity": ["interpolate", ["linear"], ["zoom"], 10, 0.35, 13, 0.7],
+      "circle-stroke-color": css("--surface"), "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 11, 0, 13, 1] } });
+    const pop = new maplibregl.Popup({ closeButton: false, offset: 10, className: "pop-wrap map-school-pop", maxWidth: "270px" });
+    map.on("click", "schools", e => {
+      const x = SCH.find(r => r.id === e.features[0].properties.id); if (!x) return;
+      closePopups(); pop.setLngLat([x.lon, x.lat]).setHTML(schoolPopupHtml(x)).addTo(map);
+    });
+    map.on("mouseenter", "schools", () => { map.getCanvas().style.cursor = "pointer"; });
+    map.on("mouseleave", "schools", () => { map.getCanvas().style.cursor = ""; });
+    const box = $(".map-box"), tg = document.createElement("label");
+    tg.className = "map-toggle"; tg.innerHTML = `<input type="checkbox" checked> <span>${esc(t("school.map"))}</span>`;
+    tg.querySelector("input").addEventListener("change", ev => map.setLayoutProperty("schools", "visibility", ev.target.checked ? "visible" : "none"));
+    box.appendChild(tg);
+  }
+  function showSchoolMarker() {
+    if (schoolMarker) { schoolMarker.remove(); schoolMarker = null; }
+    if (!map || !school) return;
+    const el = document.createElement("div");
+    el.className = "school-pin"; el.title = school.name;
+    el.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 9l7-5 7 5M5 8v8h10V8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+    schoolMarker = new maplibregl.Marker({ element: el }).setLngLat([school.lon, school.lat]).addTo(map);
+  }
 
   // ------------------------------------------------------------------ 3 · story
   function renderStory() {
@@ -651,11 +994,32 @@
   }
 
   function renderLive() {
-    const T = F.track_record || {};
-    $("#liveBody").textContent = t("live.body", { since: dname(T.since || F.today, { day: "numeric", month: "long", year: "numeric" }) });
-    const pub = T.published || 1, lines = [t(pub === 1 ? "live.stats1" : "live.stats", { p: pub, v: T.verified_forecasts || 0 })];
-    lines.push(T.verified_forecasts ? t("live.mae", { mae: fmt(T.mae, 1) }) : t("live.none"));
-    $("#liveStats").innerHTML = lines.map(l => `<div>${esc(l)}</div>`).join("");
+    const draw = rows => {
+      LOG = rows;
+      const num = v => (v === "" || v == null ? null : Number(v));
+      const R = rows.map(r => ({ issued: r.issued, day: r.for_day, st: Number(r.station), f: num(r.forecast), m: num(r.measured), p: num(r.persistence) }));
+      const byIssued = d3.groups(R, r => r.issued).sort((a, b) => d3.descending(a[0], b[0]));
+      const done = R.filter(r => r.m != null), base = done.filter(r => r.p != null);
+      const first = byIssued.length ? byIssued[byIssued.length - 1][1][0].day : F.tomorrow;
+      const checkDay = d3.timeFormat("%Y-%m-%d")(d3.timeDay.offset(day(first), 1));
+      const k = [[fmt(byIssued.length), t("live2.pub")], [fmt(R.length), t("live2.saved")], [fmt(done.length), t("live2.checked")],
+        base.length ? [t("live2.errv", { m: fmt(d3.mean(base, r => Math.abs(r.f - r.m)), 1), b: fmt(d3.mean(base, r => Math.abs(r.p - r.m)), 1) }), t("live2.err")]
+          : [`<span style="font-size:22px">${esc(t("live2.pending", { d: dname(checkDay, { weekday: "long", day: "numeric", month: "short" }) }))}</span>`, t("live2.err")]];
+      $("#liveKpis").innerHTML = k.map(([v, l]) => `<div><b>${v}</b><span>${esc(l)}</span></div>`).join("");
+      const dd = x => dname(x, { weekday: "short", day: "numeric", month: "short" });
+      const head = `<thead><tr><th>${t("live2.c.issued")}</th><th>${t("live2.c.for")}</th><th>${t("live2.c.fc")}</th><th>${t("live2.c.meas")}</th><th>${t("live2.c.all")}</th></tr></thead>`;
+      const body = byIssued.slice(0, 7).map(([iss, rs]) => {
+        const main = rs.find(r => r.st === MAIN), chk = rs.filter(r => r.m != null);
+        const wait = `<span class="wait">${t("live2.wait")}</span>`;
+        return `<tr><td>${dd(iss)}</td><td>${dd(rs[0].day)}</td>
+          <td class="n">${main ? `<span class="dot" style="background:${no2Color(main.f)}"></span>${fmt(main.f)}` : "–"}</td>
+          <td class="n">${main && main.m != null ? fmt(main.m) : wait}</td>
+          <td class="n">${chk.length ? `${fmt(d3.mean(chk, r => Math.abs(r.f - r.m)), 1)} <span class="wait">(${chk.length})</span>` : wait}</td></tr>`;
+      }).join("");
+      $("#ledger").innerHTML = head + `<tbody>${body}</tbody>`;
+    };
+    if (LOG) return draw(LOG);
+    fetch(`data/log.csv?v=${Math.floor(Date.now() / 600000)}`).then(r => r.text()).then(x => draw(d3.csvParse(x))).catch(() => draw([]));
   }
 
   // ------------------------------------------------------------------ 5 · how it works
@@ -676,7 +1040,7 @@
   function renderCharts() {
     if (!F) return;
     const s = station(sel);
-    if (s && s.status === "ok") renderHistory(s);
+    if (s && s.status === "ok") { renderHistory(s); renderBest(s); }
     renderStory(); renderEvidence();
   }
   function renderAll() {
@@ -704,12 +1068,19 @@
 
   applyStatic();
   const bust = `?v=${Math.floor(Date.now() / 600000)}`;            // fresh data every 10 minutes
-  Promise.all([fetch(`data/forecast.json${bust}`).then(r => r.json()), fetch(`data/evaluation.json${bust}`).then(r => r.json())])
-    .then(([f, e]) => {
-      F = f; E = e;
+  Promise.all([fetch(`data/forecast.json${bust}`).then(r => r.json()), fetch(`data/evaluation.json${bust}`).then(r => r.json()),
+    fetch("data/profiles.json").then(r => r.json()).catch(() => null)])
+    .then(([f, e, p]) => {
+      F = f; E = e; P = p;
+      const st = Number(params.get("st"));
+      if (st && station(st)) sel = st;
       if (!station(sel) || station(sel).status !== "ok") sel = (F.stations.find(s => s.status === "ok") || F.stations[0]).id;
       $("#status").hidden = true; $("#hero").hidden = false;
       renderAll();
+      loadSchools();
     })
     .catch(err => { console.error(err); $("#status").textContent = t("error"); });
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+    addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => null));
+  }
 })();

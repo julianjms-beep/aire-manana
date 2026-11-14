@@ -1,0 +1,25 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//AireManana//NO2 forecast Madrid//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:AireMañana · Escuelas Aguirre
+X-WR-CALDESC:Tomorrow's NO₂ at Escuelas Aguirre\, Madrid. Updated every e
+ vening after 18:30.
+X-WR-TIMEZONE:Europe/Madrid
+REFRESH-INTERVAL;VALUE=DURATION:PT1H
+X-PUBLISHED-TTL:PT1H
+BEGIN:VEVENT
+UID:2026-11-15-st8-en@aire-manana
+DTSTAMP:20261114T140529Z
+DTSTART;VALUE=DATE:20261115
+DTEND;VALUE=DATE:20261116
+SUMMARY:🟢 Outdoor PE OK · 8 µg/m³
+DESCRIPTION:Outdoor PE and recess are fine.\nLikely range: 5–12 µg/m³\n
+ Chance above the EU limit (50 µg/m³): <1 %\nCleanest school hours: 15:00
+ –17:00 (typical shape of the day)\nhttps://julianjms-beep.github.io/aire
+ -manana/?st=8&lang=en\nPrototype\, not medical advice.
+URL:https://julianjms-beep.github.io/aire-manana/?st=8&lang=en
+TRANSP:TRANSPARENT
+END:VEVENT
+END:VCALENDAR

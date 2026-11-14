@@ -1,0 +1,25 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//AireManana//NO2 forecast Madrid//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:AireMañana · Casa de Campo
+X-WR-CALDESC:Tomorrow's NO₂ at Casa de Campo\, Madrid. Updated every even
+ ing after 18:30.
+X-WR-TIMEZONE:Europe/Madrid
+REFRESH-INTERVAL;VALUE=DURATION:PT1H
+X-PUBLISHED-TTL:PT1H
+BEGIN:VEVENT
+UID:2026-11-15-st24-en@aire-manana
+DTSTAMP:20261114T140529Z
+DTSTART;VALUE=DATE:20261115
+DTEND;VALUE=DATE:20261116
+SUMMARY:🟢 Outdoor PE OK · 1 µg/m³
+DESCRIPTION:Outdoor PE and recess are fine.\nLikely range: 0–2 µg/m³\nC
+ hance above the EU limit (50 µg/m³): <1 %\nCleanest school hours: 15:00
+ –17:00 (typical shape of the day)\nhttps://julianjms-beep.github.io/aire
+ -manana/?st=24&lang=en\nPrototype\, not medical advice.
+URL:https://julianjms-beep.github.io/aire-manana/?st=24&lang=en
+TRANSP:TRANSPARENT
+END:VEVENT
+END:VCALENDAR
