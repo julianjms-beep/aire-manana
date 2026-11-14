@@ -1,0 +1,153 @@
+level,district,neighbourhood,year,edition,income
+district,Centro,,2023,2026,44958.0
+neighbourhood,Centro,Palacio,2023,2026,48025.0
+neighbourhood,Centro,Embajadores,2023,2026,37741.0
+neighbourhood,Centro,Cortes,2023,2026,49485.0
+neighbourhood,Centro,Justicia,2023,2026,57745.0
+neighbourhood,Centro,Universidad,2023,2026,45078.0
+neighbourhood,Centro,Sol,2023,2026,44128.0
+district,Arganzuela,,2023,2026,52857.0
+neighbourhood,Arganzuela,Imperial,2023,2026,54669.0
+neighbourhood,Arganzuela,Acacias,2023,2026,56322.0
+neighbourhood,Arganzuela,Chopera,2023,2026,43195.0
+neighbourhood,Arganzuela,Legazpi,2023,2026,63915.0
+neighbourhood,Arganzuela,Delicias,2023,2026,53067.0
+neighbourhood,Arganzuela,Palos de la Frontera,2023,2026,45803.0
+neighbourhood,Arganzuela,Atocha,2023,2026,55671.0
+district,Retiro,,2023,2026,64787.0
+neighbourhood,Retiro,Pacífico,2023,2026,52842.0
+neighbourhood,Retiro,Adelfas,2023,2026,58194.0
+neighbourhood,Retiro,Estrella,2023,2026,71559.0
+neighbourhood,Retiro,Ibiza,2023,2026,62317.0
+neighbourhood,Retiro,Los Jerónimos,2023,2026,84768.0
+neighbourhood,Retiro,Niño Jesús,2023,2026,84112.0
+district,Salamanca,,2023,2026,69147.0
+neighbourhood,Salamanca,Recoletos,2023,2026,95138.0
+neighbourhood,Salamanca,Goya,2023,2026,66270.0
+neighbourhood,Salamanca,Fuente del Berro,2023,2026,54409.0
+neighbourhood,Salamanca,Guindalera,2023,2026,59568.0
+neighbourhood,Salamanca,Lista,2023,2026,66700.0
+neighbourhood,Salamanca,Castellana,2023,2026,88867.0
+district,Chamartín,,2023,2026,79274.0
+neighbourhood,Chamartín,El Viso,2023,2026,96456.0
+neighbourhood,Chamartín,Prosperidad,2023,2026,55947.0
+neighbourhood,Chamartín,Ciudad Jardín,2023,2026,56896.0
+neighbourhood,Chamartín,Hispanoamérica,2023,2026,80976.0
+neighbourhood,Chamartín,Nueva España,2023,2026,92935.0
+neighbourhood,Chamartín,Castilla,2023,2026,70736.0
+district,Tetuán,,2023,2026,45762.0
+neighbourhood,Tetuán,Bellas Vistas,2023,2026,41152.0
+neighbourhood,Tetuán,Cuatro Caminos,2023,2026,56443.0
+neighbourhood,Tetuán,Castillejos,2023,2026,58273.0
+neighbourhood,Tetuán,Almenara,2023,2026,39983.0
+neighbourhood,Tetuán,Valdeacederas,2023,2026,37436.0
+neighbourhood,Tetuán,Berruguete,2023,2026,38427.0
+district,Chamberí,,2023,2026,65174.0
+neighbourhood,Chamberí,Gaztambide,2023,2026,57141.0
+neighbourhood,Chamberí,Arapiles,2023,2026,56121.0
+neighbourhood,Chamberí,Trafalgar,2023,2026,56014.0
+neighbourhood,Chamberí,Almagro,2023,2026,86678.0
+neighbourhood,Chamberí,Ríos Rosas,2023,2026,66143.0
+neighbourhood,Chamberí,Vallehermoso,2023,2026,73576.0
+district,Fuencarral-El Pardo,,2023,2026,62385.0
+neighbourhood,Fuencarral-El Pardo,El Pardo,2023,2026,43098.0
+neighbourhood,Fuencarral-El Pardo,Fuentelarreina,2023,2026,104774.0
+neighbourhood,Fuencarral-El Pardo,Peñagrande,2023,2026,58355.0
+neighbourhood,Fuencarral-El Pardo,Pilar,2023,2026,41799.0
+neighbourhood,Fuencarral-El Pardo,La Paz,2023,2026,68059.0
+neighbourhood,Fuencarral-El Pardo,Valverde,2023,2026,56095.0
+neighbourhood,Fuencarral-El Pardo,Mirasierra,2023,2026,86457.0
+neighbourhood,Fuencarral-El Pardo,El Goloso,2023,2026,82549.0
+district,Moncloa-Aravaca,,2023,2026,71711.0
+neighbourhood,Moncloa-Aravaca,Casa de Campo,2023,2026,52900.0
+neighbourhood,Moncloa-Aravaca,Argüelles,2023,2026,65987.0
+neighbourhood,Moncloa-Aravaca,Ciudad Universitaria,2023,2026,76855.0
+neighbourhood,Moncloa-Aravaca,Valdezarza,2023,2026,44802.0
+neighbourhood,Moncloa-Aravaca,Valdemarín,2023,2026,104762.0
+neighbourhood,Moncloa-Aravaca,El Plantío,2023,2026,76325.0
+neighbourhood,Moncloa-Aravaca,Aravaca,2023,2026,83047.0
+district,Latina,,2023,2026,38078.0
+neighbourhood,Latina,Los Cármenes,2023,2026,38240.0
+neighbourhood,Latina,Puerta del Ángel,2023,2026,37197.0
+neighbourhood,Latina,Lucero,2023,2026,38305.0
+neighbourhood,Latina,Aluche,2023,2026,38111.0
+neighbourhood,Latina,Campamento,2023,2026,39377.0
+neighbourhood,Latina,Cuatro Vientos,2023,2026,45071.0
+neighbourhood,Latina,Águilas,2023,2026,37212.0
+district,Carabanchel,,2023,2026,36350.0
+neighbourhood,Carabanchel,Comillas,2023,2026,36535.0
+neighbourhood,Carabanchel,Opañel,2023,2026,36456.0
+neighbourhood,Carabanchel,San Isidro,2023,2026,34893.0
+neighbourhood,Carabanchel,Vista Alegre,2023,2026,34851.0
+neighbourhood,Carabanchel,Puerta Bonita,2023,2026,33635.0
+neighbourhood,Carabanchel,Buenavista,2023,2026,40809.0
+neighbourhood,Carabanchel,Abrantes,2023,2026,36178.0
+district,Usera,,2023,2026,34651.0
+neighbourhood,Usera,Orcasitas,2023,2026,36585.0
+neighbourhood,Usera,Orcasur,2023,2026,34638.0
+neighbourhood,Usera,San Fermín,2023,2026,34500.0
+neighbourhood,Usera,Almendrales,2023,2026,36701.0
+neighbourhood,Usera,Moscardó,2023,2026,34536.0
+neighbourhood,Usera,Zofío,2023,2026,33565.0
+neighbourhood,Usera,Pradolongo,2023,2026,30335.0
+district,Puente de Vallecas,,2023,2026,32666.0
+neighbourhood,Puente de Vallecas,Entrevías,2023,2026,30388.0
+neighbourhood,Puente de Vallecas,San Diego,2023,2026,28881.0
+neighbourhood,Puente de Vallecas,Palomeras Bajas,2023,2026,37176.0
+neighbourhood,Puente de Vallecas,Palomeras Sureste,2023,2026,35288.0
+neighbourhood,Puente de Vallecas,Portazgo,2023,2026,31366.0
+neighbourhood,Puente de Vallecas,Numancia,2023,2026,32287.0
+district,Moratalaz,,2023,2026,42823.0
+neighbourhood,Moratalaz,Pavones,2023,2026,42075.0
+neighbourhood,Moratalaz,Horcajo,2023,2026,56430.0
+neighbourhood,Moratalaz,Marroquina,2023,2026,48415.0
+neighbourhood,Moratalaz,Media Legua,2023,2026,43338.0
+neighbourhood,Moratalaz,Fontarrón,2023,2026,35719.0
+neighbourhood,Moratalaz,Vinateros,2023,2026,37009.0
+district,Ciudad Lineal,,2023,2026,46937.0
+neighbourhood,Ciudad Lineal,Ventas,2023,2026,37510.0
+neighbourhood,Ciudad Lineal,Pueblo Nuevo,2023,2026,38607.0
+neighbourhood,Ciudad Lineal,Quintana,2023,2026,39597.0
+neighbourhood,Ciudad Lineal,La Concepción,2023,2026,44507.0
+neighbourhood,Ciudad Lineal,San Pascual,2023,2026,52645.0
+neighbourhood,Ciudad Lineal,San Juan Bautista,2023,2026,71341.0
+neighbourhood,Ciudad Lineal,Colina,2023,2026,67412.0
+neighbourhood,Ciudad Lineal,Atalaya,2023,2026,86333.0
+neighbourhood,Ciudad Lineal,Costillares,2023,2026,79297.0
+district,Hortaleza,,2023,2026,61472.0
+neighbourhood,Hortaleza,Palomas,2023,2026,98118.0
+neighbourhood,Hortaleza,Piovera,2023,2026,98575.0
+neighbourhood,Hortaleza,Canillas,2023,2026,49140.0
+neighbourhood,Hortaleza,Pinar del Rey,2023,2026,41018.0
+neighbourhood,Hortaleza,Apóstol Santiago,2023,2026,47663.0
+neighbourhood,Hortaleza,Valdefuentes,2023,2026,71662.0
+district,Villaverde,,2023,2026,35011.0
+neighbourhood,Villaverde,Villaverde Alto - Casco Histórico de Villaverde,2023,2026,33273.0
+neighbourhood,Villaverde,San Cristóbal,2023,2026,28240.0
+neighbourhood,Villaverde,Butarque,2023,2026,39054.0
+neighbourhood,Villaverde,Los Rosales,2023,2026,36616.0
+neighbourhood,Villaverde,Ángeles,2023,2026,35733.0
+district,Villa de Vallecas,,2023,2026,39836.0
+neighbourhood,Villa de Vallecas,Casco Histórico de Vallecas,2023,2026,32330.0
+neighbourhood,Villa de Vallecas,Santa Eugenia,2023,2026,44771.0
+neighbourhood,Villa de Vallecas,Ensanche de Vallecas,2023,2026,42838.0
+district,Vicálvaro,,2023,2026,42870.0
+neighbourhood,Vicálvaro,Casco Histórico de Vicálvaro,2023,2026,32707.0
+neighbourhood,Vicálvaro,Valdebernardo,2023,2026,49196.0
+neighbourhood,Vicálvaro,Valderrivas,2023,2026,50969.0
+neighbourhood,Vicálvaro,El Cañaveral,2023,2026,49613.0
+district,San Blas-Canillejas,,2023,2026,44468.0
+neighbourhood,San Blas-Canillejas,Simancas,2023,2026,40528.0
+neighbourhood,San Blas-Canillejas,Hellín,2023,2026,31930.0
+neighbourhood,San Blas-Canillejas,Amposta,2023,2026,29558.0
+neighbourhood,San Blas-Canillejas,Arcos,2023,2026,39733.0
+neighbourhood,San Blas-Canillejas,Rosas,2023,2026,54543.0
+neighbourhood,San Blas-Canillejas,Rejas,2023,2026,48981.0
+neighbourhood,San Blas-Canillejas,Canillejas,2023,2026,39548.0
+neighbourhood,San Blas-Canillejas,El Salvador,2023,2026,66674.0
+district,Barajas,,2023,2026,58405.0
+neighbourhood,Barajas,Alameda de Osuna,2023,2026,64316.0
+neighbourhood,Barajas,Aeropuerto,2023,2026,33236.0
+neighbourhood,Barajas,Casco Histórico de Barajas,2023,2026,37694.0
+neighbourhood,Barajas,Timón,2023,2026,51725.0
+neighbourhood,Barajas,Corralejos,2023,2026,81929.0

@@ -271,7 +271,27 @@
             <p class="card-sub" id="uncSub"></p>
             <div class="chart" id="calib"></div>
           </div>
+          <div class="card" id="trustCard" hidden>
+            <h3 data-i18n="tr.title"></h3>
+            <p class="card-sub" id="trustSub"></p>
+            <div class="lights" id="lights"></div>
+            <p class="fine" id="trustNote"></p>
+          </div>
         </div>
+      </div>
+
+      <div class="card big-card reveal" id="fairCard" hidden>
+        <div class="kicker" data-i18n="fair.kicker"></div>
+        <h3 class="h3-serif" data-i18n="fair.title"></h3>
+        <p class="card-sub" data-i18n="fair.sub"></p>
+        <div class="fair-grid">
+          <div class="ledger-wrap"><table class="ledger fair" id="fairTable"></table></div>
+          <div class="fair-find">
+            <div class="fair-big" id="fairBig"></div>
+            <p id="fairText"></p>
+          </div>
+        </div>
+        <p class="fine" id="fairNote"></p>
       </div>
     </div>
   </section>

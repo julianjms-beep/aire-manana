@@ -16,17 +16,16 @@ For each station it gives:
 - the reasons behind the forecast (recent levels, weekday or holiday, season, rain, wind, temperature, self-correction)
 - the cleanest two hours for PE tomorrow, from the station's typical day
 
-A teacher can search any of Madrid's 1,253 schools (it gets its nearest station), subscribe to a calendar that shows
-tomorrow's decision every evening, share a ready-made image on WhatsApp, print a poster with a QR code, or install the
-site as a phone app. Every forecast is saved before the day happens and checked later, so the test keeps growing.
+A teacher can find any of Madrid's 1,253 schools, subscribe to a calendar, share an image on WhatsApp, print a QR
+poster or install it as an app. Every forecast is saved before its day and checked later: a test that keeps growing.
 
 **How it works.**
 - **Data:** 2.4 million official hourly NO₂ values (Ayuntamiento de Madrid, EEA), ERA5 weather, and archived ECMWF
   forecasts.
 - **Honest test:** for testing we used the weather forecast that really existed the evening before.
-- **Model:** the average of a ridge regression and gradient-boosted trees predicts the *change* from today to
-  tomorrow. Inputs: NO₂ so far today and in recent days, tomorrow's forecast weather (rain, wind, calm hours,
-  temperature, pressure) and the calendar.
+- **Model (the core — the website only delivers its forecast):** the average of a ridge regression and gradient-boosted
+  trees predicts the *change* from today to tomorrow. Inputs: NO₂ so far today and in recent days, tomorrow's
+  forecast weather (rain, wind, calm hours, temperature, pressure) and the calendar.
 - **Self-correction:** Madrid got much cleaner (267 days above the 2030 limit in 2017, 2 in 2026). Version 1 drifted,
   over-predicting by +4.4 µg/m³ in 2024 and +8.2 in 2026. Version 2 removes its own average error of the last 30 days
   every evening.
@@ -43,7 +42,13 @@ site as a phone app. Every forecast is saved before the day happens and checked 
 
 - Trained on one station, it beats the baseline at **all 24 stations** (17–44 % lower error); v1 was worse at 14 of
   them.
-- When it said a 40–60 % chance of a bad day, one happened 44 % of the time.
+- **Why not accuracy:** "always fine" is 95 % accurate, so we compare bad days caught at equal false alarms. At all 24
+  stations a green evening was followed by a bad day on 0.3 % of 22,181 station-days; 91 % of bad days got at least a
+  yellow warning. When it said a 40–60 % chance of a bad day, one happened 44 % of the time.
+- **Fairness:** grouped by the household income of the school's neighbourhood, public or private, and children's age,
+  the improvement over the baseline is 37–39 % in every group and a green day turns bad equally rarely. But schools in
+  the lowest-income third have 2.2× the bad days (17 vs 8 a year), so they still get more missed bad days (6.7 vs 4.3 a
+  year): equal accuracy is not equal risk.
 - On the test school days, the suggested PE window had 30 % less NO₂ than the school-day average (14.8 vs 21.1 µg/m³)
   and 51 % less than 9:00–11:00.
 
@@ -58,11 +63,13 @@ site as a phone app. Every forecast is saved before the day happens and checked 
   an hourly forecast.
 - The test was scored twice (v1, then v2). The fix was designed on validation data only.
 
-**What we'd do next.** A pilot with a real school, with push alerts on top of the calendar; ozone in summer; local
+**What we'd do next.** A pilot with a real school, starting in the lowest-income neighbourhoods, with push alerts on top
+of the calendar; ozone in summer; local
 weather per station; training on all 24 stations at once.
 
 **Sources.**
-- Ayuntamiento de Madrid open data: hourly and real-time air quality, station list, education centres.
+- Ayuntamiento de Madrid open data: hourly and real-time air quality, station list, education centres, household
+  income by neighbourhood.
 - European Environment Agency: E2a up-to-date air quality.
 - Open-Meteo: ERA5, archived ECMWF IFS forecasts, live forecast.
 - EU Directive 2024/2881.

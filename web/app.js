@@ -14,7 +14,7 @@
   let lang = new URLSearchParams(location.search).get("lang") || store.get("lang")
     || ((navigator.language || "en").toLowerCase().startsWith("es") ? "es" : "en");
   if (!I18N[lang]) lang = "en";
-  let F = null, E = null, P = null, SCH = null, LOG = null, school = null, sel = MAIN, map = null, markers = {}, schoolMarker = null;
+  let F = null, E = null, P = null, FA = null, SCH = null, LOG = null, school = null, sel = MAIN, map = null, markers = {}, schoolMarker = null;
   const params = new URLSearchParams(location.search);
 
   // ------------------------------------------------------------------ helpers
@@ -778,6 +778,51 @@
     const mid = E.uncertainty.calibration.find(c => c.from === 0.4) || E.uncertainty.calibration[0];
     $("#uncSub").textContent = t("un.sub", { p: fmt(mid.observed * 100), c: fmt(E.uncertainty.coverage_80 * 100) });
     renderSeries(); renderTradeoff(); renderDrift(); renderStations(); renderFails(); renderMonths(); renderCalib(); renderLive();
+    if (FA) { renderTrust(); renderFair(); }
+  }
+
+  // What happened the day after each colour (all stations, test period) — data/fairness.json
+  function renderTrust() {
+    const T = FA.trust, L = Object.fromEntries(T.levels.map(x => [x.level, x]));
+    const col = { ok: "var(--good)", watch: "var(--mod)", alert: "var(--bad)" };
+    $("#trustSub").textContent = t("tr.sub", { n: fmt(T.station_days), acc: fmt(100 * T.always_fine_accuracy) });
+    $("#lights").innerHTML = ["ok", "watch", "alert"].map(k => {
+      const x = L[k], v = 100 * x.bad_share;
+      const txt = k === "ok" ? t("tr.ok.txt", { k: fmt(Math.round(1 / x.bad_share / 10) * 10) })
+        : k === "alert" ? t("tr.alert.txt", { p: fmt(100 * x.above_40_share) }) : t("tr.watch.txt");
+      return `<div class="light"><div><div class="light-name"><i style="background:${col[k]}"></i>${esc(t(`tr.${k}`))}</div>
+        <div class="light-days">${esc(t("tr.days", { n: fmt(x.days) }))}</div></div>
+        <div class="light-v">${fmt(v, v < 1 ? 1 : 0)}<small>%</small></div><div class="light-txt">${esc(txt)}</div></div>`;
+    }).join("");
+    $("#trustNote").textContent = t("tr.note", { p: fmt(100 * T.bad_with_warning) });
+    $("#trustCard").hidden = false;
+  }
+
+  // Does it work as well for every group of children? (income of the neighbourhood, who runs the school, age)
+  function renderFair() {
+    const G = FA.groups, low = G.income_group.low, high = G.income_group.high;
+    const row = (label, sub, g, cls = "") => `<tr${cls ? ` class="${cls}"` : ""}><td>${esc(label)}${sub ? `<span class="sub">${esc(sub)}</span>` : ""}</td>
+      <td class="n">${fmt(g.schools)}</td><td class="n">${fmt(g.bad_days_per_year, 1)}</td><td class="n">${fmt(g.gain)}%</td>
+      <td class="n">${fmt(g.caught)}%</td><td class="n">${fmt(g.green_but_bad, 1)}%</td></tr>`;
+    const grp = k => `<tr class="grp"><th colspan="6">${esc(t(k))}</th></tr>`;
+    const r100 = v => fmt(Math.round(v / 100) * 100);
+    const head = `<thead><tr>${["group", "n", "bad", "gain", "caught", "green"].map(c => `<th>${esc(t(`fair.c.${c}`))}</th>`).join("")}</tr></thead>`;
+    const body = [grp("fair.g.income"),
+      row(t("fair.low"), t("fair.low.sub", { v: r100(low.income_max) }), low), row(t("fair.middle"), "", G.income_group.middle),
+      row(t("fair.high"), t("fair.high.sub", { v: r100(high.income_min) }), high),
+      grp("fair.g.own"), row(t("fair.public"), "", G.ownership.public), row(t("fair.private"), "", G.ownership.private),
+      grp("fair.g.age"), ...["nursery", "school", "secondary", "special"].map(k => row(t(`fair.${k}`), "", G.age[k])),
+      row(t("fair.all", { n: fmt(G.all.schools) }), "", G.all, "all")].join("");
+    $("#fairTable").innerHTML = `${head}<tbody>${body}</tbody>`;
+    const gains = [G.income_group, G.ownership, G.age].flatMap(o => Object.values(o).map(g => g.gain));
+    $("#fairBig").innerHTML = `<div><b>${fmt(d3.min(gains))}–${fmt(d3.max(gains))}%</b>${esc(t("fair.big1"))}</div>
+      <div><b>${fmt(low.bad_days_per_year / high.bad_days_per_year, 1)}×</b>${esc(t("fair.big2", { a: fmt(low.bad_days_per_year, 1), b: fmt(high.bad_days_per_year, 1) }))}</div>`;
+    $("#fairText").innerHTML = t("fair.text", { c1: fmt(low.caught), c2: fmt(high.caught), m1: fmt(low.missed_per_year, 1),
+      m2: fmt(high.missed_per_year, 1), f1: fmt(low.false_alarms_per_year, 1), f2: fmt(high.false_alarms_per_year, 1) });
+    const gap = FA.gaps.income_low_minus_high, yr = (FA.source.match(/income (\d{4})/) || [])[1] || "";
+    $("#fairNote").textContent = t("fair.note", { g1: fmt(gap.gain.low, 1), g2: fmt(gap.gain.high, 1),
+      d1: fmt(gap.green_but_bad.low, 1), d2: fmt(gap.green_but_bad.high, 1), y: yr });
+    $("#fairCard").hidden = false;
   }
 
   function renderSeries() {
@@ -1069,9 +1114,10 @@
   applyStatic();
   const bust = `?v=${Math.floor(Date.now() / 600000)}`;            // fresh data every 10 minutes
   Promise.all([fetch(`data/forecast.json${bust}`).then(r => r.json()), fetch(`data/evaluation.json${bust}`).then(r => r.json()),
-    fetch("data/profiles.json").then(r => r.json()).catch(() => null)])
-    .then(([f, e, p]) => {
-      F = f; E = e; P = p;
+    fetch("data/profiles.json").then(r => r.json()).catch(() => null),
+    fetch("data/fairness.json").then(r => r.json()).catch(() => null)])
+    .then(([f, e, p, fa]) => {
+      F = f; E = e; P = p; FA = fa;
       const st = Number(params.get("st"));
       if (st && station(st)) sel = st;
       if (!station(sel) || station(sel).status !== "ok") sel = (F.stations.find(s => s.status === "ok") || F.stations[0]).id;

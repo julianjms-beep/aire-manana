@@ -434,6 +434,36 @@ p { margin: 0; }
 .ledger-note { margin-top: 14px; }
 .ledger .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; }
 
+/* trust: what happened after each colour */
+.lights { display: grid; gap: 8px; margin-top: 16px; }
+.light { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 14px; align-items: center; padding: 12px 14px; border-radius: var(--radius-s); background: var(--surface-2); border: 1px solid var(--line); }
+.light-name { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.light-name i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.light-days { font: 400 12px var(--mono); color: var(--muted); }
+.light-v { font: 400 30px/1 var(--serif); text-align: right; font-variant-numeric: tabular-nums; }
+.light-v small { font-size: 16px; color: var(--muted); }
+.light-txt { grid-column: 1 / -1; font-size: 13px; color: var(--ink-2); }
+
+/* fairness */
+.fair-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 28px; margin-top: 20px; align-items: start; }
+.ledger.fair td:first-child { white-space: normal; min-width: 150px; }
+.ledger.fair th:not(:first-child), .ledger.fair td:not(:first-child) { text-align: right; }
+.ledger.fair tr.grp th { text-align: left; font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); padding: 16px 0 6px; border-bottom: 1px solid var(--line); }
+.ledger.fair tr.all td { font-weight: 600; border-top: 1px solid var(--line-2); }
+.ledger.fair .sub { display: block; font-size: 12px; color: var(--muted); font-weight: 400; }
+.fair-find { background: var(--watch-soft); border-radius: var(--radius-s); padding: 20px; }
+.fair-big { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.fair-big div { font-size: 12.5px; color: var(--ink-2); line-height: 1.35; }
+.fair-big b { display: block; font: 400 44px/1 var(--serif); color: var(--ink); margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+.fair-find p { font-size: 14px; color: var(--ink-2); margin: 0; }
+.fair-find p strong { color: var(--ink); }
+@media (max-width: 1080px) { .fair-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 560px) {
+  .ledger.fair th:nth-child(5), .ledger.fair td:nth-child(5) { display: none; }
+  .ledger.fair td:first-child { min-width: 0; }
+  .fair-big b { font-size: 36px; }
+}
+
 /* share dialog + toast */
 dialog.share {
   width: min(440px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: auto; padding: 18px; border: 1px solid var(--line); border-radius: 22px;

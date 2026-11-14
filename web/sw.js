@@ -1,8 +1,8 @@
 /* AireMañana service worker: the site works offline with the last forecast it saw.
    Network first for everything (the forecast changes every evening), cache only as a fallback. */
-const CACHE = "airemanana-v1";
+const CACHE = "airemanana-v2";
 const SHELL = ["./", "index.html", "style.css", "app.js", "i18n.js", "favicon.svg", "manifest.webmanifest",
-  "data/forecast.json", "data/evaluation.json", "data/profiles.json", "icons/icon-192.png"];
+  "data/forecast.json", "data/evaluation.json", "data/profiles.json", "data/fairness.json", "icons/icon-192.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

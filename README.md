@@ -20,6 +20,9 @@
   comes. AireMañana checks its own errors of the last 30 days every evening and removes them (bias in 2026: +8.2 → −0.2 µg/m³).
 - Any of Madrid's **1,253 schools** can find its forecast, add it to a calendar, share it on WhatsApp or print a poster.
   The site also suggests the **cleanest two hours for PE** — on test days, 30 % less NO₂ than the school-day average.
+- **Can it be trusted, and is it fair?** At all 24 stations a green evening was followed by a bad day only about 1 time
+  in 340. It works just as well for schools in the lowest-income neighbourhoods, for public and private schools and for
+  nurseries — although the lowest-income neighbourhoods have twice as many bad days.
 - Every forecast is **saved before its day happens** and checked afterwards: a test that grows every evening.
 
 ## The problem
@@ -75,6 +78,11 @@ flowchart LR
   L --> R["Live record<br/>checked once measured"]
 ```
 
+**The machine learning is the core.** Steps 2 and 3 below are a trained model: it learned from about 1,300 days how
+today's levels, the weather and the calendar change tomorrow's NO₂. Everything else on the website — school search,
+calendar, share image, poster — only delivers its forecast. Replace the model with "tomorrow = today" and a teacher gets
+an 80 % bigger error and less than half the bad days caught for the same number of false alarms.
+
 1. **Every evening at about 18:35** (Madrid winter time) a GitHub Action wakes up and downloads today's hourly NO₂ from
    Madrid's real-time file, the last days from the European Environment Agency, and ECMWF's newest weather forecast.
 2. **The model** looks at what is known at that moment: NO₂ so far today and in recent days, tomorrow's forecast rain,
@@ -121,6 +129,11 @@ Each station gets its own self-correction from its own recent errors.
   and checked once the day has been measured.
 
 ## Results (held-out test, 932 days, Escuelas Aguirre)
+
+**Why these measures, and not accuracy.** Only 45 of the 932 test days were bad days, so a tool that always says "fine"
+is 95.2 % accurate — exactly as accurate as AireMañana at its threshold. Accuracy cannot tell them apart. A teacher needs
+the number (mean absolute error) and a decision that catches bad days without crying wolf. So the main comparison is
+**bad days caught for the same number of false alarms**, plus the bias (does it drift?) and whether its chances come true.
 
 | Method | Mean absolute error (µg/m³) | Bias | Bad days caught (of 45) | False alarms |
 |---|---|---|---|---|
@@ -184,6 +197,51 @@ station is not the school's own air.
 
 ![Schools coloured by the distance to their nearest station, and the distribution of distances](figures/schools.png)
 
+### Can a teacher trust the colour?
+
+What happened the day after each colour, at all 24 stations of the test period (22,181 station-days):
+
+| Evening colour | Days | Followed by a bad day | Above 40 µg/m³ |
+|---|---|---|---|
+| 🟢 Green — PE outdoors | 19,341 | **0.3 %** (about 1 in 340) | 2.6 % |
+| 🟡 Yellow — keep an eye | 2,086 | 11 % | 47 % |
+| 🔴 Red — PE indoors | 754 | 48 % | 87 % |
+
+**91 % of the bad days had at least a yellow warning** the evening before.
+
+### Is it fair to every child?
+
+The model never sees who goes to a school. But it was trained at one station in Salamanca, one of Madrid's richest
+districts, and stations are not spread evenly over the city. So we checked whether it works worse for some children
+anyway: by the household income of the school's neighbourhood (Madrid City Council, 2023), by who runs the school and by
+the children's age. Each school counts the test days of its nearest station. Nothing in the model was changed by this check.
+
+| Schools | Number | Bad days a year | Better than "tomorrow = today" | Bad days caught | Green on a bad day |
+|---|---|---|---|---|---|
+| Lowest-income third of neighbourhoods (under 38,400 € a year) | 419 | **17.2** | 39 % | 61 % | 0.33 % |
+| Middle third | 423 | 9.1 | 37 % | 49 % | 0.35 % |
+| Highest-income third (over 56,100 € a year) | 411 | **7.9** | 37 % | 46 % | 0.28 % |
+| Public | 483 | 12.7 | 38 % | 56 % | 0.33 % |
+| Private and state-funded private (*concertado*) | 770 | 10.6 | 37 % | 53 % | 0.31 % |
+| Nurseries (0–3) | 586 | 11.2 | 37 % | 54 % | 0.32 % |
+| *Colegios* (3–12, some up to 18) | 561 | 11.9 | 38 % | 56 % | 0.32 % |
+| Secondary institutes (12–18) | 67 | 11.3 | 38 % | 54 % | 0.31 % |
+| Special education | 39 | 8.9 | 37 % | 52 % | 0.30 % |
+| **All schools** | **1,253** | **11.4** | **38 %** | **54 %** | **0.32 %** |
+
+- **Same accuracy for every group.** The improvement over the baseline is 37–39 % everywhere, and a green evening turns
+  into a bad day just as rarely. Resampling the 140 test weeks 1,000 times, the lowest-income third gets 0.9 to 2.9 points
+  *more* improvement than the highest, and the gap in "green on a bad day" is −0.1 to +0.2 points: no sign that it treats
+  these children worse.
+- **Not the same air.** The lowest-income third has **2.2 times as many bad days** (Usera and Villaverde, next to Plaza
+  Elíptica, about 31 a year; Retiro, 3). AireMañana catches a larger share of them (61 % vs 46 %), but those children
+  still get more bad days without a warning (6.7 vs 4.3 a year) and more PE moved indoors for nothing (10.6 vs 4.7).
+  **Equal accuracy is not equal risk** — which is why a pilot should start there.
+- Limits of the check: income is the neighbourhood's average, not that of the families at each school; groups share
+  stations; and sex is not in any open school dataset, so it could not be checked.
+
+![By district: the improvement over the baseline is similar in rich and poor districts, but the poorest have far more bad days](figures/fairness.png)
+
 ### Where it fails
 
 - At the threshold chosen on validation it caught 30 of 45 bad days in the test (67 %), below the 85 % it reached in
@@ -194,12 +252,15 @@ station is not the school's own air.
 - It only covers NO₂, not ozone or particles. Central Madrid's weather is used for every station.
 - A school gets the forecast of its nearest station; a playground next to a busy road can be dirtier than its station.
 - The cleanest hours come from a typical day, not from an hourly forecast.
+- Equal accuracy is not equal risk: the lowest-income neighbourhoods have twice as many bad days, so more of its misses
+  (6.7 vs 4.3 a year) and false alarms land on them.
 - The test period was scored twice: once for v1, and again for v2 after we found the drift. The fix was designed on
   validation data only.
 
 ## What we'd do next
 
-- A pilot with a real school, with push alerts on top of the calendar.
+- A pilot with a real school — starting in the lowest-income neighbourhoods, where bad days are twice as common — with
+  push alerts on top of the calendar.
 - Ozone in summer, and local weather for every station.
 - Train on all 24 stations at once, so each one learns from the others.
 
@@ -221,6 +282,13 @@ never saw, still beats the baseline everywhere once each station corrects itself
 **Does it know about weekends and holidays?** Yes. Weekday, Madrid public holidays and season are inputs, and the
 cleanest-hours tip uses a different typical day for school days, Saturdays and Sundays or holidays.
 
+**Is it fair to children in poorer neighbourhoods?** Its accuracy is the same for every group we could check: income of
+the neighbourhood, public or private school, children's age. But the lowest-income neighbourhoods have twice as many bad
+days, so they also get more of its mistakes. See *Is it fair to every child?* above.
+
+**Why not report accuracy?** Because most days are fine: "always fine" would be 95 % accurate and useless. We count bad
+days caught for the same number of false alarms, and what happened after each colour.
+
 **What if a station has no data today?** It is shown in grey on the map and the other stations keep working.
 
 **How do I get it in my calendar?** Choose your station or school on the website, press *Add to calendar* and pick Apple,
@@ -238,6 +306,7 @@ python make_site_data.py live         # tomorrow's forecast, log and calendars -
 python make_site_data.py calendars    # only the calendar files               -> web/cal/*.ics
 python make_site_data.py schools      # schools -> nearest station            -> web/data/schools.json
 python make_site_data.py profiles     # typical day per station + test check  -> web/data/profiles.json
+python make_site_data.py fairness     # trust + fairness by income, school, age -> web/data/fairness.json
 cd web && python -m http.server       # the website at http://localhost:8000
 ```
 
@@ -251,13 +320,14 @@ log and the calendars, and publishes `web/` to GitHub Pages.
 ## Repository
 
 ```
-AireManana.ipynb        the full study with explanations: data, baselines, model, test, drift, stations, schools, cleanest hours, live record
+AireManana.ipynb        the full study with explanations: data, baselines, model, test, drift, stations, schools, cleanest hours, live record, trust and fairness
 WRITEUP.md              one-page write-up
 madrid_data.py          downloads and cleans the NO₂ data (history, real time, EEA) and the weather (ERA5, archived and live ECMWF)
 forecast_model.py       features, the model (ridge + boosted trees + self-correction), baselines and scores
 live.py                 tomorrow's forecast for one station, with range, probability and reasons
-make_site_data.py       builds everything the website reads: evaluate, live, calendars, schools, profiles
-data/                   processed daily NO₂ and weather, station list, validation errors (residuals.json)
+make_site_data.py       builds everything the website reads: evaluate, live, calendars, schools, profiles, fairness
+data/                   processed daily NO₂ and weather, station list, validation errors (residuals.json), household income
+                        by neighbourhood (income_madrid.csv)
 figures/                charts from the notebook
 docs/                   screenshots for this page
 .github/workflows/      the evening job: forecast, save, publish
@@ -267,14 +337,15 @@ web/                    the website — static HTML, CSS and JavaScript (D3, Map
   manifest.webmanifest · sw.js · icons/    installable app that works offline
   og.png                preview image for links shared on WhatsApp and social media
   cal/                  48 calendar feeds (.ics), rebuilt every evening
-  data/                 forecast.json · log.csv · evaluation.json · profiles.json · schools.json
+  data/                 forecast.json · log.csv · evaluation.json · profiles.json · schools.json · fairness.json
 ```
 
 ## Sources
 
 **Data**
 - Ayuntamiento de Madrid, open data: hourly air quality (dataset 201200), real-time air quality (212531),
-  station list (212629), education centres (300614, CC BY 4.0). https://datos.madrid.es
+  station list (212629), education centres (300614, CC BY 4.0), district and neighbourhood indicators — household
+  income (300087). https://datos.madrid.es
 - European Environment Agency: up-to-date air quality data (E2a). https://eeadmz1-downloads-webapp.azurewebsites.net/
 - Open-Meteo: ERA5 historical weather, archived ECMWF IFS forecasts (Previous Runs API), live forecast. https://open-meteo.com
 - EU Directive 2024/2881 on ambient air quality: NO₂ daily limit of 50 µg/m³, at most 18 days a year from 2030

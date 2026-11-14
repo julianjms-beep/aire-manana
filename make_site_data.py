@@ -6,6 +6,8 @@
     python make_site_data.py profiles   # once: typical hour-by-hour shape of NO2 per station -> web/data/profiles.json
     python make_site_data.py schools    # once: Madrid's schools and their nearest station -> web/data/schools.json
     python make_site_data.py calendars  # calendar feeds (.ics) per station from forecast.json + log.csv -> web/cal/
+    python make_site_data.py fairness   # once: can a teacher trust the colour, and is it fair to every group of
+                                        #   children (income, public/private, age)? -> web/data/fairness.json
 
 The numbers in `evaluate` are the same as in the notebook AireManana.ipynb (same splits, model and thresholds).
 """
@@ -404,8 +406,175 @@ def schools():
     print(d["kind"].value_counts().to_string())
 
 
+# ---------------------------------------------------------------------------------------------- fairness
+INCOME_URL = ("https://datos.madrid.es/dataset/300087-0-indicadores-distritos/resource/"
+              "300087-0-indicadores-distritos-csv/download/300087-0-indicadores-distritos-csv.csv")
+INCOME_CSV = Path("data/income_madrid.csv")
+# school-list neighbourhood names that are spelled differently in the income panel
+INCOME_ALIAS = {"casco h barajas": "casco historico de barajas", "casco h vallecas": "casco historico de vallecas",
+                "casco h vicalvaro": "casco historico de vicalvaro", "casco historico": "casco historico de vallecas",
+                "concepcion": "la concepcion", "el pilar": "pilar", "las aguilas": "aguilas", "los angeles": "angeles",
+                "palos de moguer": "palos de la frontera", "pena grande": "penagrande",
+                "san andres": "villaverde alto casco historico de villaverde",
+                "villaverde alto c h": "villaverde alto casco historico de villaverde"}
+AGE_GROUPS = {0: "school", 1: "school", 2: "secondary", 3: "nursery", 4: "nursery", 5: "special", 6: "special"}
+PUBLIC_TYPES = {0, 2, 3, 5}       # public colegios, secondary institutes (IES), public nurseries, public special education
+
+
+def _norm(x) -> str:
+    import re
+    import unicodedata
+    x = unicodedata.normalize("NFKD", str(x)).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", " ", x).strip()
+
+
+def income_table() -> pd.DataFrame:
+    """Mean net household income (€/year) for every district and neighbourhood of Madrid.
+    Source: Ayuntamiento de Madrid, Panel de indicadores de distritos y barrios (latest edition; AEAT / Urban Audit)."""
+    if not INCOME_CSV.exists():
+        import io
+        import requests
+        raw = requests.get(INCOME_URL, headers={"User-Agent": "Mozilla/5.0"}, timeout=300).content
+        d = pd.read_csv(io.BytesIO(raw), sep=";", encoding="utf-8-sig", dtype=str)
+        d = d[d["indicador_completo"] == "Renta neta media anual de los hogares (Urban Audit)"]
+        d = d[(d["Periodo panel"] == d["Periodo panel"].max()) & d["cod_distrito"].notna()]
+        out = pd.DataFrame({"level": np.where(d["cod_barrio"].isna(), "district", "neighbourhood"),
+                            "district": d["distrito"], "neighbourhood": d["barrio"].fillna(""), "year": d["año"],
+                            "edition": d["Periodo panel"], "income": d["valor_indicador"].astype(float).round().astype(int)})
+        out.to_csv(INCOME_CSV, index=False)
+    return pd.read_csv(INCOME_CSV, keep_default_na=False)
+
+
+def station_test_forecasts(no2, obs, fc, final) -> pd.DataFrame:
+    """v2 and "tomorrow = today" for every station-day of the test period (the same forecasts as in `evaluate`)."""
+    rows = []
+    for st in sorted(no2["station"].unique()):
+        Ts = build_table(no2, int(st), obs, fc).dropna(subset=["target", "no2_today_to_18h", "temp_mean_tomorrow"])
+        Ts = Ts[Ts["date"] >= TEST_FROM]
+        if len(Ts) >= 200:
+            rows.append(pd.DataFrame({"station": int(st), "date": Ts["tomorrow"].to_numpy(), "y": Ts["target"].to_numpy(),
+                                      "p": final.forecast(Ts), "b": baseline_persistence(Ts)}))
+    return pd.concat(rows).dropna().reset_index(drop=True)
+
+
+def fairness():
+    """Can a teacher trust the colour, and does it work as well for every group of children?
+    The model never sees who goes to a school. We check its test results by the household income of the school's
+    neighbourhood, public or private school, and the children's age. Nothing in the model is changed by this check."""
+    no2, obs, fc = load()
+    E = json.loads((WEB / "evaluation.json").read_text())
+    alert_at, watch_at = E["alert_at"], 35.0
+    T_obs = build_table(no2, STATION, obs, obs).dropna(subset=["target", "no2_today_to_18h"])
+    final = AireManana().fit(period(T_obs, *FINAL_TRAIN))
+    D = station_test_forecasts(no2, obs, fc, final)
+    stored = {s["id"]: s["v2_mae"] for s in E["stations"]}
+    check = D.groupby("station").apply(lambda g: round(float(np.mean(np.abs(g["p"] - g["y"]))), 2))
+    assert all(abs(check[k] - v) < 1e-9 for k, v in stored.items()), "test forecasts differ from evaluation.json"
+
+    bad, alert, green = D["y"] > LIMIT, D["p"] > alert_at, D["p"] < watch_at
+    yellow = ~green & ~alert
+    y_ag, p_ag = np.array(E["series"]["measured"], float), np.array(E["series"]["v2"], float)
+    trust = {"station_days": int(len(D)), "bad_days": int(bad.sum()),
+             "always_fine_accuracy": round(float((~bad).mean()), 3),
+             "aguirre": {"days": int(len(y_ag)), "always_fine_accuracy": round(float(np.mean(y_ag <= LIMIT)), 3),
+                         "v2_accuracy": round(float(np.mean((p_ag > alert_at) == (y_ag > LIMIT))), 3)},
+             "levels": [{"level": k, "days": int(m.sum()), "bad": int((m & bad).sum()),
+                         "bad_share": round(float((m & bad).sum() / m.sum()), 4),
+                         "above_40_share": round(float((m & (D["y"] > 40)).sum() / m.sum()), 3)}
+                        for k, m in (("ok", green), ("watch", yellow), ("alert", alert))],
+             "bad_with_warning": round(float((bad & ~green).sum() / bad.sum()), 3)}
+
+    # schools -> neighbourhood income (district income when the neighbourhood is unknown)
+    inc = income_table()
+    nb = {_norm(r.neighbourhood): r.income for r in inc[inc["level"] == "neighbourhood"].itertuples()}
+    di = {_norm(r.district): r.income for r in inc[inc["level"] == "district"].itertuples()}
+    s = json.loads((WEB / "schools.json").read_text())
+    S = pd.DataFrame(s["schools"], columns=s["fields"])
+    S["income"] = S["neighbourhood"].map(_norm).map(lambda v: nb.get(INCOME_ALIAS.get(v, v)))
+    S["income_from"] = np.where(S["income"].notna(), "neighbourhood", "district")
+    S["income"] = S["income"].fillna(S["district"].map(_norm).map(di))
+    cuts = S["income"].quantile([1 / 3, 2 / 3]).to_numpy()
+    S["income_group"] = np.select([S["income"] <= cuts[0], S["income"] <= cuts[1]], ["low", "middle"], "high")
+    S["ownership"] = np.where(S["type"].isin(PUBLIC_TYPES), "public", "private")
+    S["age"] = S["type"].map(AGE_GROUPS)
+
+    # per station and test week: sums we need, so groups (and resamples of weeks) are quick to add up
+    D["week"] = pd.to_datetime(D["date"]).dt.to_period("W").astype(str)
+    D = D.assign(days=1, ae=(D["p"] - D["y"]).abs(), be=(D["b"] - D["y"]).abs(), bad=bad, caught=bad & alert,
+                 fa=~bad & alert, green=green, green_bad=green & bad, no2=D["y"])
+    cols = ["days", "ae", "be", "bad", "caught", "fa", "green", "green_bad", "no2"]
+    W = D.groupby(["week", "station"])[cols].sum()
+
+    def summarise(sums, g) -> dict:
+        return {"schools": int(len(g)), "income_median": int(g["income"].median()),
+                "km_median": round(float(g["km"].median()), 2), "mean_no2": r1(sums["no2"] / sums["days"]),
+                "bad_days_per_year": r1(365 * sums["bad"] / sums["days"]),
+                "error": round(float(sums["ae"] / sums["days"]), 2),
+                "baseline_error": round(float(sums["be"] / sums["days"]), 2),
+                "gain": r1(100 * (1 - sums["ae"] / sums["be"])), "caught": r1(100 * sums["caught"] / sums["bad"]),
+                "missed_per_year": r1(365 * (sums["bad"] - sums["caught"]) / sums["days"]),
+                "false_alarms_per_year": r1(365 * sums["fa"] / sums["days"]),
+                "green_but_bad": round(float(100 * sums["green_bad"] / sums["green"]), 2)}
+
+    def weekly(g):     # weekly sums for a group of schools: each school counts its station's days once
+        w = g.groupby("station").size()
+        x = W.join(w.rename("w"), on="station", how="inner")
+        return x[cols].mul(x["w"], axis=0).groupby(level="week").sum()
+
+    groups, weekly_of = {}, {}
+    for col in ("income_group", "ownership", "age"):
+        for k, g in S.groupby(col):
+            weekly_of[(col, k)] = wk = weekly(g)
+            groups.setdefault(col, {})[k] = summarise(wk.sum(), g)
+    groups["income_group"]["low"]["income_max"] = int(cuts[0])
+    groups["income_group"]["high"]["income_min"] = int(cuts[1])
+    everyone = weekly(S)
+    groups["all"] = summarise(everyone.sum(), S)
+
+    # how much could the gaps move by chance? resample the test weeks 1,000 times (seed 0)
+    rng, weeks = np.random.default_rng(0), everyone.index.to_numpy()
+    keys = ["gain", "caught", "green_but_bad", "bad_days_per_year", "missed_per_year", "false_alarms_per_year"]
+    gaps = {}
+    for name, a, b in (("income_low_minus_high", ("income_group", "low"), ("income_group", "high")),
+                       ("public_minus_private", ("ownership", "public"), ("ownership", "private"))):
+        A, B = weekly_of[a].reindex(weeks, fill_value=0), weekly_of[b].reindex(weeks, fill_value=0)
+        ga, gb = S[S[a[0]] == a[1]], S[S[b[0]] == b[1]]
+        draws = []
+        for _ in range(1000):
+            i = rng.integers(0, len(weeks), len(weeks))
+            sa, sb = summarise(A.iloc[i].sum(), ga), summarise(B.iloc[i].sum(), gb)
+            draws.append([sa[k] - sb[k] for k in keys])
+        lo, hi = np.percentile(np.array(draws, float), [5, 95], axis=0)
+        gaps[name] = {k: {"gap": r1(groups[a[0]][a[1]][k] - groups[b[0]][b[1]][k]), "low": r1(l), "high": r1(h)}
+                      for k, l, h in zip(keys, lo, hi)}
+
+    official = {_norm(r.district): r.district for r in inc[inc["level"] == "district"].itertuples()}
+    districts = []
+    for k, g in S.groupby("district"):
+        row = summarise(weekly(g).sum(), g)
+        row.update(district=official.get(_norm(k), k), income=int(di.get(_norm(k), np.nan)),
+                   stations=int(g["station"].nunique()))
+        districts.append(row)
+
+    out = {"source": "Ayuntamiento de Madrid, Panel de indicadores de distritos y barrios "
+                     f"(edition {inc['edition'].iloc[0]}, household income {inc['year'].iloc[0]}; datos.madrid.es)",
+           "alert_at": alert_at, "watch_at": watch_at, "trust": trust, "groups": groups, "gaps": gaps,
+           "districts": sorted(districts, key=lambda r: r["income"]),
+           "income_from": S["income_from"].value_counts().to_dict()}
+    (WEB / "fairness.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")))
+    L = {x["level"]: x for x in trust["levels"]}
+    print(f"fairness.json written · green turned bad on {100 * L['ok']['bad_share']:.2f}% of {L['ok']['days']} "
+          f"station-days · {100 * trust['bad_with_warning']:.0f}% of bad days got at least yellow")
+    for col in ("income_group", "ownership", "age"):
+        for k, v in groups[col].items():
+            print(f"  {col:12s} {k:9s} {v['schools']:4d} schools · {v['bad_days_per_year']:5.1f} bad days/yr · "
+                  f"gain {v['gain']:4.1f}% · caught {v['caught']:4.1f}% · green but bad {v['green_but_bad']:.2f}%")
+    for name, g in gaps.items():
+        print(f"  {name}: " + ", ".join(f"{k} {v['gap']:+} [{v['low']:+}, {v['high']:+}]" for k, v in g.items()))
+
+
 # ---------------------------------------------------------------------------------------------- calendars
-SITE = "https://julianjms-beep.github.io/aire-manana/"
+SITE ="https://julianjms-beep.github.io/aire-manana/"
 CAL = Path("web/cal")
 CAL_TEXT = {
     "en": {"ok": "🟢 Outdoor PE OK", "watch": "🟡 Outdoor OK, keep an eye", "alert": "🔴 PE indoors",
@@ -488,4 +657,4 @@ def calendars():
 
 if __name__ == "__main__":
     {"evaluate": evaluate, "live": live, "profiles": profiles, "schools": schools,
-     "calendars": calendars}[sys.argv[1] if len(sys.argv) > 1 else "live"]()
+     "calendars": calendars, "fairness": fairness}[sys.argv[1] if len(sys.argv) > 1 else "live"]()
