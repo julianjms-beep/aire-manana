@@ -11,15 +11,13 @@ REFRESH-INTERVAL;VALUE=DURATION:PT1H
 X-PUBLISHED-TTL:PT1H
 BEGIN:VEVENT
 UID:2026-11-15-st56-en@aire-manana
-DTSTAMP:20261114T214048Z
+DTSTAMP:20261117T235701Z
 DTSTART;VALUE=DATE:20261115
 DTEND;VALUE=DATE:20261116
 SUMMARY:🟢 Outdoor PE OK · 21 µg/m³
 DESCRIPTION:Outdoor PE and recess are fine.\nLikely range: 14–30 µg/m³\
- nChance above the EU limit (50 µg/m³): <1 %\nCleanest daytime hours (no 
- school tomorrow): 14:00–16:00 (typical shape of the day)\nhttps://julian
- jms-beep.github.io/aire-manana/?st=56&lang=en\nPrototype\, not medical adv
- ice.
+ nChance above the EU limit (50 µg/m³): <1 %\nhttps://julianjms-beep.gith
+ ub.io/aire-manana/?st=56&lang=en\nPrototype\, not medical advice.
 URL:https://julianjms-beep.github.io/aire-manana/?st=56&lang=en
 TRANSP:TRANSPARENT
 END:VEVENT
