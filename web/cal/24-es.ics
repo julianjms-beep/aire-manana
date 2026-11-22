@@ -11,7 +11,7 @@ REFRESH-INTERVAL;VALUE=DURATION:PT1H
 X-PUBLISHED-TTL:PT1H
 BEGIN:VEVENT
 UID:2026-11-15-st24-es@aire-manana
-DTSTAMP:20261121T222123Z
+DTSTAMP:20261122T224557Z
 DTSTART;VALUE=DATE:20261115
 DTEND;VALUE=DATE:20261116
 SUMMARY:🟢 EF fuera: sí · 1 µg/m³ (medido 2)
@@ -24,15 +24,28 @@ TRANSP:TRANSPARENT
 END:VEVENT
 BEGIN:VEVENT
 UID:2026-11-22-st24-es@aire-manana
-DTSTAMP:20261121T222123Z
+DTSTAMP:20261122T224557Z
 DTSTART;VALUE=DATE:20261122
 DTEND;VALUE=DATE:20261123
 SUMMARY:🟢 EF fuera: sí · 12 µg/m³
 DESCRIPTION:Educación Física y recreo\, al aire libre.\nRango probable: 8
- –18 µg/m³\nProbabilidad de superar el límite UE (50 µg/m³): <1 %\nH
- oras más limpias del día (mañana no hay cole): 15:00–17:00 (forma tí
- pica del día)\nhttps://julianjms-beep.github.io/aire-manana/?st=24&lang=e
- s\nPrototipo\, no es consejo médico.
+ –18 µg/m³\nProbabilidad de superar el límite UE (50 µg/m³): <1 %\nh
+ ttps://julianjms-beep.github.io/aire-manana/?st=24&lang=es\nPrototipo\, no
+  es consejo médico.
+URL:https://julianjms-beep.github.io/aire-manana/?st=24&lang=es
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:2026-11-23-st24-es@aire-manana
+DTSTAMP:20261122T224557Z
+DTSTART;VALUE=DATE:20261123
+DTEND;VALUE=DATE:20261124
+SUMMARY:🟢 EF fuera: sí · 6 µg/m³
+DESCRIPTION:Educación Física y recreo\, al aire libre.\nRango probable: 4
+ –8 µg/m³\nProbabilidad de superar el límite UE (50 µg/m³): <1 %\nHo
+ ras más limpias del horario escolar: 15:00–17:00 (forma típica del dí
+ a)\nhttps://julianjms-beep.github.io/aire-manana/?st=24&lang=es\nPrototipo
+ \, no es consejo médico.
 URL:https://julianjms-beep.github.io/aire-manana/?st=24&lang=es
 TRANSP:TRANSPARENT
 END:VEVENT
