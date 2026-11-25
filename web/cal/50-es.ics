@@ -11,7 +11,7 @@ REFRESH-INTERVAL;VALUE=DURATION:PT1H
 X-PUBLISHED-TTL:PT1H
 BEGIN:VEVENT
 UID:2026-11-15-st50-es@aire-manana
-DTSTAMP:20261124T032847Z
+DTSTAMP:20261125T013504Z
 DTSTART;VALUE=DATE:20261115
 DTEND;VALUE=DATE:20261116
 SUMMARY:🟢 EF fuera: sí · 10 µg/m³ (medido 12)
@@ -24,7 +24,7 @@ TRANSP:TRANSPARENT
 END:VEVENT
 BEGIN:VEVENT
 UID:2026-11-22-st50-es@aire-manana
-DTSTAMP:20261124T032847Z
+DTSTAMP:20261125T013504Z
 DTSTART;VALUE=DATE:20261122
 DTEND;VALUE=DATE:20261123
 SUMMARY:🟢 EF fuera: sí · 18 µg/m³ (medido 21)
@@ -37,10 +37,10 @@ TRANSP:TRANSPARENT
 END:VEVENT
 BEGIN:VEVENT
 UID:2026-11-23-st50-es@aire-manana
-DTSTAMP:20261124T032847Z
+DTSTAMP:20261125T013504Z
 DTSTART;VALUE=DATE:20261123
 DTEND;VALUE=DATE:20261124
-SUMMARY:🟢 EF fuera: sí · 28 µg/m³ (medido 43)
+SUMMARY:🟢 EF fuera: sí · 28 µg/m³ (medido 42)
 DESCRIPTION:Educación Física y recreo\, al aire libre.\nRango probable: 1
  9–40 µg/m³\nProbabilidad de superar el límite UE (50 µg/m³): 4 %\nh
  ttps://julianjms-beep.github.io/aire-manana/?st=50&lang=es\nPrototipo\, no
@@ -50,12 +50,25 @@ TRANSP:TRANSPARENT
 END:VEVENT
 BEGIN:VEVENT
 UID:2026-11-25-st50-es@aire-manana
-DTSTAMP:20261124T032847Z
+DTSTAMP:20261125T013504Z
 DTSTART;VALUE=DATE:20261125
 DTEND;VALUE=DATE:20261126
 SUMMARY:🟢 EF fuera: sí · 22 µg/m³
 DESCRIPTION:Educación Física y recreo\, al aire libre.\nRango probable: 1
- 5–32 µg/m³\nProbabilidad de superar el límite UE (50 µg/m³): 1 %\nH
+ 5–32 µg/m³\nProbabilidad de superar el límite UE (50 µg/m³): 1 %\nh
+ ttps://julianjms-beep.github.io/aire-manana/?st=50&lang=es\nPrototipo\, no
+  es consejo médico.
+URL:https://julianjms-beep.github.io/aire-manana/?st=50&lang=es
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:2026-11-26-st50-es@aire-manana
+DTSTAMP:20261125T013504Z
+DTSTART;VALUE=DATE:20261126
+DTEND;VALUE=DATE:20261127
+SUMMARY:🟢 EF fuera: sí · 26 µg/m³
+DESCRIPTION:Educación Física y recreo\, al aire libre.\nRango probable: 1
+ 8–37 µg/m³\nProbabilidad de superar el límite UE (50 µg/m³): 2 %\nH
  oras más limpias del horario escolar: 12:00–14:00 (forma típica del d
  ía)\nhttps://julianjms-beep.github.io/aire-manana/?st=50&lang=es\nPrototi
  po\, no es consejo médico.
