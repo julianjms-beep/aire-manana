@@ -11,7 +11,7 @@ REFRESH-INTERVAL;VALUE=DURATION:PT1H
 X-PUBLISHED-TTL:PT1H
 BEGIN:VEVENT
 UID:2026-11-15-st47-es@aire-manana
-DTSTAMP:20261125T013504Z
+DTSTAMP:20261127T010854Z
 DTSTART;VALUE=DATE:20261115
 DTEND;VALUE=DATE:20261116
 SUMMARY:🟢 EF fuera: sí · 9 µg/m³ (medido 12)
@@ -24,10 +24,10 @@ TRANSP:TRANSPARENT
 END:VEVENT
 BEGIN:VEVENT
 UID:2026-11-22-st47-es@aire-manana
-DTSTAMP:20261125T013504Z
+DTSTAMP:20261127T010854Z
 DTSTART;VALUE=DATE:20261122
 DTEND;VALUE=DATE:20261123
-SUMMARY:🟢 EF fuera: sí · 21 µg/m³
+SUMMARY:🟢 EF fuera: sí · 21 µg/m³ (medido 17)
 DESCRIPTION:Educación Física y recreo\, al aire libre.\nRango probable: 1
  4–29 µg/m³\nProbabilidad de superar el límite UE (50 µg/m³): <1 %\n
  https://julianjms-beep.github.io/aire-manana/?st=47&lang=es\nPrototipo\, n
@@ -37,7 +37,7 @@ TRANSP:TRANSPARENT
 END:VEVENT
 BEGIN:VEVENT
 UID:2026-11-23-st47-es@aire-manana
-DTSTAMP:20261125T013504Z
+DTSTAMP:20261127T010854Z
 DTSTART;VALUE=DATE:20261123
 DTEND;VALUE=DATE:20261124
 SUMMARY:🟢 EF fuera: sí · 22 µg/m³
@@ -45,6 +45,20 @@ DESCRIPTION:Educación Física y recreo\, al aire libre.\nRango probable: 1
  5–32 µg/m³\nProbabilidad de superar el límite UE (50 µg/m³): 1 %\nh
  ttps://julianjms-beep.github.io/aire-manana/?st=47&lang=es\nPrototipo\, no
   es consejo médico.
+URL:https://julianjms-beep.github.io/aire-manana/?st=47&lang=es
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:2026-11-28-st47-es@aire-manana
+DTSTAMP:20261127T010854Z
+DTSTART;VALUE=DATE:20261128
+DTEND;VALUE=DATE:20261129
+SUMMARY:🟡 EF fuera\, vigilar · 40 µg/m³
+DESCRIPTION:Se puede salir — pero conviene vigilarlo.\nRango probable: 28
+ –57 µg/m³\nProbabilidad de superar el límite UE (50 µg/m³): 20 %\nH
+ oras más limpias del día (mañana no hay cole): 15:00–17:00 (forma tí
+ pica del día)\nhttps://julianjms-beep.github.io/aire-manana/?st=47&lang=e
+ s\nPrototipo\, no es consejo médico.
 URL:https://julianjms-beep.github.io/aire-manana/?st=47&lang=es
 TRANSP:TRANSPARENT
 END:VEVENT
