@@ -11,7 +11,7 @@ REFRESH-INTERVAL;VALUE=DURATION:PT1H
 X-PUBLISHED-TTL:PT1H
 BEGIN:VEVENT
 UID:2026-11-15-st47-en@aire-manana
-DTSTAMP:20261127T010854Z
+DTSTAMP:20261128T004138Z
 DTSTART;VALUE=DATE:20261115
 DTEND;VALUE=DATE:20261116
 SUMMARY:🟢 Outdoor PE OK · 9 µg/m³ (measured 12)
@@ -23,7 +23,7 @@ TRANSP:TRANSPARENT
 END:VEVENT
 BEGIN:VEVENT
 UID:2026-11-22-st47-en@aire-manana
-DTSTAMP:20261127T010854Z
+DTSTAMP:20261128T004138Z
 DTSTART;VALUE=DATE:20261122
 DTEND;VALUE=DATE:20261123
 SUMMARY:🟢 Outdoor PE OK · 21 µg/m³ (measured 17)
@@ -35,7 +35,7 @@ TRANSP:TRANSPARENT
 END:VEVENT
 BEGIN:VEVENT
 UID:2026-11-23-st47-en@aire-manana
-DTSTAMP:20261127T010854Z
+DTSTAMP:20261128T004138Z
 DTSTART;VALUE=DATE:20261123
 DTEND;VALUE=DATE:20261124
 SUMMARY:🟢 Outdoor PE OK · 22 µg/m³
@@ -47,15 +47,28 @@ TRANSP:TRANSPARENT
 END:VEVENT
 BEGIN:VEVENT
 UID:2026-11-28-st47-en@aire-manana
-DTSTAMP:20261127T010854Z
+DTSTAMP:20261128T004138Z
 DTSTART;VALUE=DATE:20261128
 DTEND;VALUE=DATE:20261129
 SUMMARY:🟡 Outdoor OK\, keep an eye · 40 µg/m³
 DESCRIPTION:Outdoor activity is fine — keep an eye on it.\nLikely range: 
- 28–57 µg/m³\nChance above the EU limit (50 µg/m³): 20 %\nCleanest da
- ytime hours (no school tomorrow): 15:00–17:00 (typical shape of the day)
- \nhttps://julianjms-beep.github.io/aire-manana/?st=47&lang=en\nPrototype\,
-  not medical advice.
+ 28–57 µg/m³\nChance above the EU limit (50 µg/m³): 20 %\nhttps://jul
+ ianjms-beep.github.io/aire-manana/?st=47&lang=en\nPrototype\, not medical 
+ advice.
+URL:https://julianjms-beep.github.io/aire-manana/?st=47&lang=en
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:2026-11-29-st47-en@aire-manana
+DTSTAMP:20261128T004138Z
+DTSTART;VALUE=DATE:20261129
+DTEND;VALUE=DATE:20261130
+SUMMARY:🟢 Outdoor PE OK · 34 µg/m³
+DESCRIPTION:Outdoor PE and recess are fine.\nLikely range: 23–48 µg/m³\
+ nChance above the EU limit (50 µg/m³): 8 %\nCleanest daytime hours (no s
+ chool tomorrow): 14:00–16:00 (typical shape of the day)\nhttps://julianj
+ ms-beep.github.io/aire-manana/?st=47&lang=en\nPrototype\, not medical advi
+ ce.
 URL:https://julianjms-beep.github.io/aire-manana/?st=47&lang=en
 TRANSP:TRANSPARENT
 END:VEVENT
